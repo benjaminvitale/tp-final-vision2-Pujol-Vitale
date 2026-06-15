@@ -44,7 +44,7 @@ python config.py        # imprime DATA_DIR resuelto y la config completa
 |---|---|---|
 | 0 | `python scripts/00_inspect_data.py` | Inspecciona y valida el dataset (✅ implementado) |
 | 1 | `python scripts/01_make_splits.py` | Split 65/15/20 por imagen, estratificado (✅ implementado) |
-| 3 | `python scripts/02_train_vgg.py` | Replicación VGG16_BN: 3 variantes × 5 semillas (pendiente) |
+| 3 | `python scripts/02_train_vgg.py` | Replicación VGG16_BN: 3 variantes × 5 semillas (✅ implementado) |
 | 4 | `python scripts/03_train_resnet.py` | Backbone propio ResNet-50: freeze + full fine-tune (✅ implementado) |
 
 > **Siempre correr Fase 0 primero.** No avanzar si los sanity checks no pasan.
