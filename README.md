@@ -43,7 +43,7 @@ python config.py        # imprime DATA_DIR resuelto y la config completa
 | Fase | Comando | Qué hace |
 |---|---|---|
 | 0 | `python scripts/00_inspect_data.py` | Inspecciona y valida el dataset (✅ implementado) |
-| 1 | `python scripts/01_make_splits.py` | Split 65/15/20 por imagen, estratificado (pendiente) |
+| 1 | `python scripts/01_make_splits.py` | Split 65/15/20 por imagen, estratificado (✅ implementado) |
 | 3 | `python scripts/02_train_vgg.py` | Replicación VGG16_BN: 3 variantes × 5 semillas (pendiente) |
 | 4 | `python scripts/03_train_resnet.py` | Backbone propio ResNet-50 (pendiente) |
 
@@ -58,6 +58,21 @@ python scripts/00_inspect_data.py --check-corrupt # además verifica imágenes i
 
 Verificado: **268 clases, 4923 imágenes, 4–70 por clase (media 18.4)** → coincide con
 el paper. Reporte en `outputs/results/00_inspect_report.json`.
+
+### Fase 1 — splits + dataset + transforms (implementada)
+
+```bash
+python scripts/01_make_splits.py    # genera outputs/splits/{train,val,test}.json + label_map.json
+```
+
+- **Split por imagen 65/15/20**, estratificado por clase con `SPLIT_SEED` fijo, con
+  garantía de que las 268 clases estén en los 3 splits (necesario para las clases
+  con 4 imágenes). Resultado real: 64.7 / 15.2 / 20.0%.
+- Rutas guardadas **relativas a `DATA_DIR`** → el mismo split sirve en Kaggle y local.
+- `src/transforms.py`: pipeline base (resize 300×300 + ToTensor = [0,1], **sin**
+  ImageNet) y de train con la augmentation del paper (flip, brillo 0.2–0.5,
+  rotación ±15°, blur gaussiano kernel ∈ {1,3,5}). Flag `USE_IMAGENET_NORM` (default OFF).
+- `src/dataset.py`: `MuzzleDataset` + `make_dataloader` leyendo desde los JSON.
 
 ## Estructura
 

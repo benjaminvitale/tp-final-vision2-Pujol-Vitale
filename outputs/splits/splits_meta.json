@@ -1,0 +1,1631 @@
+{
+  "seed": 42,
+  "fracs": {
+    "train": 0.65,
+    "val": 0.15,
+    "test": 0.2
+  },
+  "counts": {
+    "train": 3187,
+    "val": 750,
+    "test": 986,
+    "total": 4923
+  },
+  "frac_real": {
+    "train": 0.6474,
+    "val": 0.1523,
+    "test": 0.2003
+  },
+  "num_classes": 268,
+  "all_classes_in_each_split": true,
+  "per_class": {
+    "cattle_0100": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_0200": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_0300": {
+      "n": 17,
+      "train": 11,
+      "val": 3,
+      "test": 3
+    },
+    "cattle_0400": {
+      "n": 7,
+      "train": 5,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_0500": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_0600": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_0700": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_0800": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_0900": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_1000": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_1100": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_1200": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_1300": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_1400": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_1500": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_1600": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_1700": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_1800": {
+      "n": 22,
+      "train": 15,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_1900": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_2000": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_2100": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_2200": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_2220": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_2300": {
+      "n": 22,
+      "train": 15,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_2320": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_2400": {
+      "n": 23,
+      "train": 15,
+      "val": 3,
+      "test": 5
+    },
+    "cattle_2500": {
+      "n": 33,
+      "train": 21,
+      "val": 5,
+      "test": 7
+    },
+    "cattle_2510": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_2600": {
+      "n": 27,
+      "train": 18,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_2700": {
+      "n": 17,
+      "train": 11,
+      "val": 3,
+      "test": 3
+    },
+    "cattle_2710": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_2740": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_2800": {
+      "n": 24,
+      "train": 15,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_2900": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_2930": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_3000": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_3100": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_3200": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_3300": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_3400": {
+      "n": 7,
+      "train": 5,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_3420": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_3802": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_3812": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_3814": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_3819": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_3832": {
+      "n": 42,
+      "train": 28,
+      "val": 6,
+      "test": 8
+    },
+    "cattle_3842": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_3844": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_3847": {
+      "n": 21,
+      "train": 14,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_3852": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_3856": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4208": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4259": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_4323": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4326": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4330": {
+      "n": 28,
+      "train": 18,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_4339": {
+      "n": 20,
+      "train": 13,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4347": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4363": {
+      "n": 21,
+      "train": 14,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4369": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4381": {
+      "n": 24,
+      "train": 15,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4385": {
+      "n": 23,
+      "train": 15,
+      "val": 3,
+      "test": 5
+    },
+    "cattle_4399": {
+      "n": 7,
+      "train": 5,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_4421": {
+      "n": 32,
+      "train": 21,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_4422": {
+      "n": 22,
+      "train": 15,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4451": {
+      "n": 7,
+      "train": 5,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_4454": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4456": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_4479": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4488": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4499": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_4537": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4539": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4545": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_4549": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_4551": {
+      "n": 28,
+      "train": 18,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_4568": {
+      "n": 23,
+      "train": 15,
+      "val": 3,
+      "test": 5
+    },
+    "cattle_4607": {
+      "n": 34,
+      "train": 22,
+      "val": 5,
+      "test": 7
+    },
+    "cattle_4613": {
+      "n": 70,
+      "train": 46,
+      "val": 10,
+      "test": 14
+    },
+    "cattle_4614": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4649": {
+      "n": 34,
+      "train": 22,
+      "val": 5,
+      "test": 7
+    },
+    "cattle_4668": {
+      "n": 21,
+      "train": 14,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4678": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4679": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4680": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4685": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4686": {
+      "n": 31,
+      "train": 20,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_4716": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4717": {
+      "n": 5,
+      "train": 3,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_4733": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_4739": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4748": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4770": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4775": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4776": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4804": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4819": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_4820": {
+      "n": 38,
+      "train": 24,
+      "val": 6,
+      "test": 8
+    },
+    "cattle_4833": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4839": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4840": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4895": {
+      "n": 24,
+      "train": 15,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4915": {
+      "n": 30,
+      "train": 20,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_4921": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4947": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_4951": {
+      "n": 39,
+      "train": 25,
+      "val": 6,
+      "test": 8
+    },
+    "cattle_4969": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4971": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4984": {
+      "n": 24,
+      "train": 15,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4985": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_4986": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_4995": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5009": {
+      "n": 17,
+      "train": 11,
+      "val": 3,
+      "test": 3
+    },
+    "cattle_5026": {
+      "n": 23,
+      "train": 15,
+      "val": 3,
+      "test": 5
+    },
+    "cattle_5028": {
+      "n": 21,
+      "train": 14,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5066": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5073": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5077": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5083": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_5090": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5097": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5100": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_5112": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5132": {
+      "n": 30,
+      "train": 20,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_5133": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5138": {
+      "n": 11,
+      "train": 7,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5143": {
+      "n": 9,
+      "train": 6,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_5153": {
+      "n": 5,
+      "train": 3,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5164": {
+      "n": 32,
+      "train": 21,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_5165": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5170": {
+      "n": 40,
+      "train": 26,
+      "val": 6,
+      "test": 8
+    },
+    "cattle_5171": {
+      "n": 20,
+      "train": 13,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5197": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5207": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5208": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5215": {
+      "n": 48,
+      "train": 31,
+      "val": 7,
+      "test": 10
+    },
+    "cattle_5224": {
+      "n": 28,
+      "train": 18,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_5234": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_5235": {
+      "n": 24,
+      "train": 15,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5249": {
+      "n": 24,
+      "train": 15,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5273": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5275": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5282": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5283": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5297": {
+      "n": 32,
+      "train": 21,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_5298": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5307": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5314": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5325": {
+      "n": 36,
+      "train": 24,
+      "val": 5,
+      "test": 7
+    },
+    "cattle_5355": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5359": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5360": {
+      "n": 35,
+      "train": 23,
+      "val": 5,
+      "test": 7
+    },
+    "cattle_5362": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5373": {
+      "n": 27,
+      "train": 18,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5374": {
+      "n": 27,
+      "train": 18,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5403": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5404": {
+      "n": 22,
+      "train": 15,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5407": {
+      "n": 40,
+      "train": 26,
+      "val": 6,
+      "test": 8
+    },
+    "cattle_5408": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5410": {
+      "n": 20,
+      "train": 13,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5411": {
+      "n": 31,
+      "train": 20,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_5425": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5427": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5432": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5477": {
+      "n": 9,
+      "train": 6,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_5507": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5508": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5509": {
+      "n": 22,
+      "train": 15,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5519": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5529": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_5537": {
+      "n": 37,
+      "train": 24,
+      "val": 6,
+      "test": 7
+    },
+    "cattle_5556": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_5559": {
+      "n": 21,
+      "train": 14,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5581": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_5604": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5605": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5620": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5630": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5633": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5634": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5639": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5654": {
+      "n": 53,
+      "train": 34,
+      "val": 8,
+      "test": 11
+    },
+    "cattle_5658": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5670": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5677": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5695": {
+      "n": 20,
+      "train": 13,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5697": {
+      "n": 31,
+      "train": 20,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_5717": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5745": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5761": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5762": {
+      "n": 7,
+      "train": 5,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5774": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5777": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_5781": {
+      "n": 27,
+      "train": 18,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5784": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5803": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5804": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5806": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5809": {
+      "n": 24,
+      "train": 15,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5815": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_5816": {
+      "n": 9,
+      "train": 6,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_5836": {
+      "n": 22,
+      "train": 15,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_5844": {
+      "n": 30,
+      "train": 20,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_5886": {
+      "n": 25,
+      "train": 16,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_5925": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_5932": {
+      "n": 38,
+      "train": 24,
+      "val": 6,
+      "test": 8
+    },
+    "cattle_5953": {
+      "n": 30,
+      "train": 20,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_5971": {
+      "n": 45,
+      "train": 29,
+      "val": 7,
+      "test": 9
+    },
+    "cattle_5986": {
+      "n": 5,
+      "train": 3,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_6011": {
+      "n": 32,
+      "train": 21,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_6012": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6017": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6022": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_6038": {
+      "n": 22,
+      "train": 15,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6066": {
+      "n": 50,
+      "train": 32,
+      "val": 8,
+      "test": 10
+    },
+    "cattle_6071": {
+      "n": 26,
+      "train": 17,
+      "val": 4,
+      "test": 5
+    },
+    "cattle_6084": {
+      "n": 36,
+      "train": 24,
+      "val": 5,
+      "test": 7
+    },
+    "cattle_6098": {
+      "n": 20,
+      "train": 13,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6124": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6161": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6167": {
+      "n": 21,
+      "train": 14,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6171": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6184": {
+      "n": 16,
+      "train": 11,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6189": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6191": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6196": {
+      "n": 17,
+      "train": 11,
+      "val": 3,
+      "test": 3
+    },
+    "cattle_6197": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6199": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6210": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6213": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6216": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6220": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6226": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6237": {
+      "n": 6,
+      "train": 4,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_6253": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_6266": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6276": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6277": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6278": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6282": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6283": {
+      "n": 5,
+      "train": 3,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_6287": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6294": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6295": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6313": {
+      "n": 34,
+      "train": 22,
+      "val": 5,
+      "test": 7
+    },
+    "cattle_6331": {
+      "n": 32,
+      "train": 21,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_6333": {
+      "n": 54,
+      "train": 35,
+      "val": 8,
+      "test": 11
+    },
+    "cattle_6442": {
+      "n": 13,
+      "train": 8,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6446": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_6458": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6479": {
+      "n": 15,
+      "train": 10,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6499": {
+      "n": 9,
+      "train": 6,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_6505": {
+      "n": 14,
+      "train": 9,
+      "val": 2,
+      "test": 3
+    },
+    "cattle_6506": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_6530": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_6606": {
+      "n": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_8050": {
+      "n": 4,
+      "train": 2,
+      "val": 1,
+      "test": 1
+    },
+    "cattle_8094": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_8095": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_9021": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_9029": {
+      "n": 29,
+      "train": 19,
+      "val": 4,
+      "test": 6
+    },
+    "cattle_9634": {
+      "n": 31,
+      "train": 20,
+      "val": 5,
+      "test": 6
+    },
+    "cattle_9635": {
+      "n": 8,
+      "train": 5,
+      "val": 1,
+      "test": 2
+    },
+    "cattle_9736": {
+      "n": 18,
+      "train": 11,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_9742": {
+      "n": 19,
+      "train": 12,
+      "val": 3,
+      "test": 4
+    },
+    "cattle_9773": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    },
+    "cattle_9798": {
+      "n": 42,
+      "train": 28,
+      "val": 6,
+      "test": 8
+    },
+    "cattle_9801": {
+      "n": 10,
+      "train": 6,
+      "val": 2,
+      "test": 2
+    }
+  }
+}
