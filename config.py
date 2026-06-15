@@ -117,15 +117,57 @@ REPLICATE_SEEDS = (0, 1, 2, 3, 4)  # 5 réplicas → accuracy media ± std.
 # --------------------------------------------------------------------------- #
 # Weighted Cross-Entropy
 # --------------------------------------------------------------------------- #
-# PAPER: w_i = N_max / N_i, con N_max=70. El máximo real del dataset también es 70,
-# así que el empírico coincide con el paper. Calculamos N_max EMPÍRICAMENTE desde el
-# split de train (robusto al reshuffle). Para forzar un valor fijo, usar el override.
-WCE_NMAX_OVERRIDE: int | None = None  # None = empírico del train (≈70, = paper).
+# PAPER: w_i = N_max / N_i, con N_max=70 (máximo del dataset completo).
+# Nosotros calculamos los pesos desde el split de TRAIN (sin fuga): N_i = conteo en
+# train, N_max = máximo de esos conteos (≈46, porque train ≈65% de la clase de 70).
+# N_max es solo un factor de escala GLOBAL de la loss; el peso relativo entre clases
+# (N_max/N_i) es lo que importa y se preserva. Para forzar el valor literal del paper
+# (70) y comparar, setear el override. Ver DEVIATIONS.md.
+WCE_NMAX_OVERRIDE: int | None = None  # None = empírico del train (≈46).
 
 # --------------------------------------------------------------------------- #
 # Modelos
 # --------------------------------------------------------------------------- #
 MODELS = ("vgg16_bn", "resnet50")  # vgg16_bn = replica el paper; resnet50 = backbone propio.
+
+# Pesos preentrenados de ImageNet. Para no depender de internet en Kaggle, los
+# bajamos una vez y los subimos como Kaggle Dataset; models.py los carga desde acá.
+# Nombres canónicos de torchvision (NO renombrar los .pth):
+PRETRAINED_FILES = {
+    "vgg16_bn": "vgg16_bn-6c64b313.pth",
+    "resnet50": "resnet50-0676ba61.pth",
+}
+
+
+def _find_pretrained_dir() -> Path | None:
+    """Carpeta con los .pth preentrenados, o None si no se encuentra (→ se baja).
+
+    Orden: env CATTLE_PRETRAINED_DIR → /kaggle/input/*/ (donde estén los .pth) →
+    local pretrained_weights/ (en el proyecto o repos padre / worktree).
+    """
+    env = os.environ.get("CATTLE_PRETRAINED_DIR")
+    if env:
+        return Path(env)
+
+    any_file = next(iter(PRETRAINED_FILES.values()))
+    candidates: list[Path] = []
+
+    kaggle_input = Path("/kaggle/input")
+    if kaggle_input.is_dir():
+        # carpeta de Kaggle que contenga el .pth (en cualquier nivel razonable)
+        candidates += [p.parent for p in kaggle_input.glob(f"*/{any_file}")]
+        candidates += [p.parent for p in kaggle_input.glob(f"*/*/{any_file}")]
+
+    for base in [PROJECT_ROOT, *PROJECT_ROOT.parents]:
+        candidates.append(base / "pretrained_weights")
+
+    for c in candidates:
+        if (c / any_file).is_file():
+            return c
+    return None
+
+
+PRETRAINED_DIR = _find_pretrained_dir()
 
 
 def ensure_output_dirs() -> None:

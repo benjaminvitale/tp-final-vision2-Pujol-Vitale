@@ -74,6 +74,30 @@ python scripts/01_make_splits.py    # genera outputs/splits/{train,val,test}.jso
   rotación ±15°, blur gaussiano kernel ∈ {1,3,5}). Flag `USE_IMAGENET_NORM` (default OFF).
 - `src/dataset.py`: `MuzzleDataset` + `make_dataloader` leyendo desde los JSON.
 
+### Fase 2 — modelos + losses (implementada)
+
+- `src/models.py`: `build_model('vgg16_bn'|'resnet50', num_classes=268, freeze_backbone=True)`.
+  Reemplaza la cabeza por `Linear(..., 268)` y, con `freeze_backbone=True` (PAPER),
+  congela el backbone conv y entrena solo las FC.
+- `src/losses.py`: `build_loss('ce'|'wce')`. Weighted CE con `w_i = N_max/N_i`
+  calculado desde el split de train (ver `DEVIATIONS.md` sobre `N_max`).
+
+**Pesos preentrenados (Kaggle, sin internet).** Para no depender de internet en el
+notebook, bajá una vez los `.pth` de ImageNet y subilos como Kaggle Dataset:
+
+| Modelo | Archivo (no renombrar) |
+|---|---|
+| VGG16_BN | `vgg16_bn-6c64b313.pth` |
+| ResNet-50 | `resnet50-0676ba61.pth` |
+
+```bash
+curl -L -O https://download.pytorch.org/models/vgg16_bn-6c64b313.pth
+curl -L -O https://download.pytorch.org/models/resnet50-0676ba61.pth
+```
+
+`config.py` autodetecta esos `.pth` en `/kaggle/input/*/` (o seteá
+`CATTLE_PRETRAINED_DIR`). Si no los encuentra, `models.py` los baja por internet.
+
 ## Estructura
 
 ```
@@ -82,8 +106,8 @@ src/
   utils.py                # seeds, logging, I/O
   dataset.py              # (Fase 1) Dataset + DataLoader
   transforms.py           # (Fase 1) preprocesamiento + data augmentation
-  models.py               # (Fase 2) VGG16_BN, ResNet-50
-  losses.py               # (Fase 2) CE, Weighted CE
+  models.py               # VGG16_BN, ResNet-50 (freeze backbone / full finetune)
+  losses.py               # CE, Weighted CE
   train.py / evaluate.py  # (Fase 3) entrenamiento y evaluación
 scripts/                  # 00..03, orquestación por fase
 outputs/                  # splits/ checkpoints/ results/ logs/  (pesados gitignored)

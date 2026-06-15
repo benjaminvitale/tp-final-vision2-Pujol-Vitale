@@ -51,8 +51,13 @@ No son desviaciones (el paper no los fija), pero se documentan para reproducibil
 - **Semillas de réplica:** `(0, 1, 2, 3, 4)` para las 5 corridas.
 - **Semilla de split:** 42, fija; los splits se guardan a disco y se reusan.
 - **num_workers** del DataLoader: 4.
-- **Weighted CE `N_max`:** se calcula empíricamente del split de train (da 70, igual
-  al paper). Override disponible en `config.py` (`WCE_NMAX_OVERRIDE`).
+- **Weighted CE `N_max`:** los pesos se calculan desde el split de **train** (sin
+  fuga): `N_i` = conteo en train, `N_max` = máximo de esos conteos (**≈46**, no 70,
+  porque train ≈65% de la clase de 70 imágenes). `N_max` es solo un factor de escala
+  global de la loss; el peso relativo entre clases (`N_max/N_i`) se preserva, que es
+  lo que importa. El paper usa el literal 70 (máximo del dataset completo). Override
+  disponible en `config.py` (`WCE_NMAX_OVERRIDE = 70`) para reproducir el valor exacto
+  del paper y comparar.
 
 ---
 
