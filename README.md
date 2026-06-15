@@ -45,7 +45,7 @@ python config.py        # imprime DATA_DIR resuelto y la config completa
 | 0 | `python scripts/00_inspect_data.py` | Inspecciona y valida el dataset (✅ implementado) |
 | 1 | `python scripts/01_make_splits.py` | Split 65/15/20 por imagen, estratificado (✅ implementado) |
 | 3 | `python scripts/02_train_vgg.py` | Replicación VGG16_BN: 3 variantes × 5 semillas (pendiente) |
-| 4 | `python scripts/03_train_resnet.py` | Backbone propio ResNet-50 (pendiente) |
+| 4 | `python scripts/03_train_resnet.py` | Backbone propio ResNet-50: freeze + full fine-tune (✅ implementado) |
 
 > **Siempre correr Fase 0 primero.** No avanzar si los sanity checks no pasan.
 
@@ -97,6 +97,27 @@ curl -L -O https://download.pytorch.org/models/resnet50-0676ba61.pth
 
 `config.py` autodetecta esos `.pth` en `/kaggle/input/*/` (o seteá
 `CATTLE_PRETRAINED_DIR`). Si no los encuentra, `models.py` los baja por internet.
+
+### Fase 4 — backbone propio ResNet-50 (implementada)
+
+```bash
+python scripts/03_train_resnet.py            # freeze + full fine-tune, seed 0, 50 épocas
+python scripts/03_train_resnet.py --smoke    # pipeline rápido en CPU (subset, 2 épocas, sin ImageNet)
+```
+
+- **Misma receta del paper** (300×300, [0,1] crudo, SGD mom=0.9, lr=0.001,
+  StepLR(7, 0.1), 50 épocas), reusando `src/train.py` y `src/evaluate.py` —no se
+  reimplementa el loop. ResNet-50 **NO** replica el 98.7% (ese es VGG16_BN); es el
+  backbone que se reutilizará en domain adaptation.
+- Corre **dos modos**: `freeze` (`freeze_backbone=True`, solo FC, como el paper) y
+  `finetune` (`freeze_backbone=False`, fine-tune completo). Flags útiles:
+  `--modes freeze`, `--seeds 0 1 2` (→ media ± std), `--loss wce`, `--aug`.
+- El **mejor run por val accuracy** (selección sin fuga de test) se copia a
+  `outputs/checkpoints/resnet50_backbone.pt` → ese es el checkpoint que toma la fase
+  futura de domain adaptation.
+- Reporta test global + balanced (media ± std por modo) en
+  `outputs/results/03_resnet_summary.json`, CSV por clase por run, y la accuracy de las
+  8 clases con 4 imágenes (ver `DEVIATIONS.md`) sin esconderla detrás del promedio.
 
 ## Estructura
 
