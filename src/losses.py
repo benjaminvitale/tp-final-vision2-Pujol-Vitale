@@ -8,6 +8,8 @@ PAPER (optimización de desbalance):
 """
 from __future__ import annotations
 
+import warnings
+
 import torch
 import torch.nn as nn
 
@@ -26,14 +28,22 @@ def compute_class_counts(train_entries: list[dict],
 def compute_class_weights(train_entries: list[dict],
                           num_classes: int = config.NUM_CLASSES,
                           nmax_override: int | None = config.WCE_NMAX_OVERRIDE) -> torch.Tensor:
-    """Pesos de Weighted CE: w_i = N_max / N_i (float32)."""
+    """Pesos de Weighted CE: w_i = N_max / N_i (float32).
+
+    En el run real las 268 clases están en train (garantizado por los splits). Si
+    alguna clase tiene 0 imágenes (p.ej. al subsetear en un smoke-test), se le asigna
+    peso 0 —no aparece como target, así que no afecta la loss— y se emite un warning.
+    """
     counts = compute_class_counts(train_entries, num_classes).float()
-    if (counts == 0).any():
-        # No debería pasar: el split garantiza ≥1 por clase en train.
-        missing = (counts == 0).nonzero().flatten().tolist()
-        raise ValueError(f"Clases sin imágenes en train: {missing}. Revisar splits.")
-    n_max = float(nmax_override) if nmax_override is not None else float(counts.max())
-    return n_max / counts
+    nonzero = counts > 0
+    if not bool(nonzero.all()):
+        n_missing = int((~nonzero).sum())
+        warnings.warn(f"{n_missing}/{num_classes} clases sin imágenes en train "
+                      f"(peso 0). En el run completo esto NO debería pasar.")
+    n_max = float(nmax_override) if nmax_override is not None else float(counts[nonzero].max())
+    weights = torch.zeros(num_classes, dtype=torch.float32)
+    weights[nonzero] = n_max / counts[nonzero]
+    return weights
 
 
 def build_loss(kind: str,
