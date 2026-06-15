@@ -132,17 +132,55 @@ cattle-reid/
 
 ---
 
-## 5. Entorno
+## 5. Entorno de ejecución: Kaggle Notebooks
 
-- Python 3.10+, PyTorch + torchvision, scikit-learn (split estratificado), Pillow, numpy, pandas, tqdm.
-- GPU: Colab/Kaggle (T4/P100). El paper estima 20–302 min por modelo (50 épocas) en P100. Con 3 variantes × 5 semillas, planificar el tiempo (priorizar pocas semillas primero para validar el pipeline, después escalar).
-- `requirements.txt` con versiones fijadas.
+**Plataforma elegida: Kaggle.** GPU gratis (P100 o T4×2), 30 hs/semana, sin setup de drivers ni de cuotas, sin colas de disponibilidad. La P100 es la misma GPU que usó el paper. (Google Cloud queda reservado para la fase futura de domain adaptation.)
+
+### 5.1. Dependencias
+- Python 3.10+, PyTorch + torchvision, scikit-learn (split estratificado), Pillow, numpy, pandas, tqdm. La imagen de Kaggle ya trae casi todo; instalar solo lo que falte.
+- Mantener un `requirements.txt` con versiones fijadas para reproducibilidad local, pero en Kaggle confiar en la imagen base + pip puntual.
+
+### 5.2. Subir el dataset a Kaggle
+El dataset (~643 MB) ya está descargado localmente. Subirlo como **Kaggle Dataset privado** (Create → New Dataset → subir el .zip o la carpeta). Una vez creado, se adjunta al notebook con "Add Input" y queda montado en modo **solo lectura** en:
+```
+/kaggle/input/<slug-del-dataset>/
+```
+Confirmar la estructura real ahí dentro en la Fase 0 (puede haber una carpeta extra de nivel superior según cómo se haya zippeado).
+
+### 5.3. Subir el código
+Dos opciones, en orden de preferencia:
+1. **Repo en GitHub** → en el notebook, con internet activado, `git clone`. Es lo más limpio para iterar y versionar.
+2. Subir `src/` como un **Kaggle Dataset de tipo "utility script"** y adjuntarlo.
+
+### 5.4. Configuración del notebook
+- **Accelerator:** Settings → Accelerator → **GPU P100** (o T4×2; para entrenar un modelo a la vez alcanza con una sola GPU, no complicar con multi-GPU).
+- **Internet: ON.** Necesario para `git clone`, `pip install` y —clave— para que **torchvision descargue los pesos preentrenados de ImageNet** la primera vez. Requiere cuenta de Kaggle verificada por teléfono.
+
+### 5.5. Rutas (mapear en `config.py`)
+```
+DATA_DIR   = /kaggle/input/<slug-del-dataset>/...   # solo lectura
+OUTPUT_DIR = /kaggle/working/outputs                # escritura + persiste al guardar versión
+```
+Importante: **`/kaggle/working/` es el único directorio escribible que persiste** (hasta 20 GB, se guarda al hacer "Save Version"). Todos los checkpoints, splits y resultados van ahí. Cualquier cosa fuera de `/kaggle/working/` se pierde al cerrar la sesión.
+
+### 5.6. Límites de sesión (planificar el sweep en función de esto)
+- Sesión interactiva: se corta a las ~12 h; idle timeout ~20–40 min (la sesión muere si no hay actividad).
+- Ejecución en background ("Save & Run All" / commit): corre hasta ~12 h sin que tengas que estar conectado. **Usar este modo para el sweep largo** (3 variantes × 5 semillas).
+- Cuota: **30 h de GPU por semana**.
+- El presupuesto alcanza de sobra: con `freeze_backbone=True` solo se entrena la cabeza FC, así que cada corrida es rápida. Aun así, **validar primero el pipeline con 1 sola semilla y pocas épocas**, y recién después lanzar el sweep completo en background. No quemar la cuota debuggeando.
+
+### 5.7. Checklist de arranque en el notebook
+1. `nvidia-smi` → confirmar la GPU.
+2. `python -c "import torch; print(torch.cuda.is_available())"` → debe dar `True`.
+3. `git clone` del repo (o adjuntar el dataset de código).
+4. Setear `DATA_DIR` al path de `/kaggle/input/...` y correr `scripts/00_inspect_data.py`.
+5. Verificar que el reporte cuadre (268 clases, ~4923 imágenes, min 4 / max 70) antes de entrenar.
 
 ---
 
 ## 6. Entregable de esta etapa
 
-1. Pipeline reproducible que, apuntando a `DATA_DIR`, corre Fase 0→4 de punta a punta.
+1. Pipeline reproducible que, apuntando a `DATA_DIR` (montado en `/kaggle/input/...`), corre Fase 0→4 de punta a punta en un notebook de Kaggle con GPU.
 2. Tabla resumen en `outputs/results/` con accuracy media ± std por variante (VGG16_BN: CE / CE+aug / WCE) y de ResNet-50.
 3. Checkpoint de ResNet-50 guardado para reutilizar.
 4. README con instrucciones de ejecución.
