@@ -95,8 +95,24 @@ curl -L -O https://download.pytorch.org/models/vgg16_bn-6c64b313.pth
 curl -L -O https://download.pytorch.org/models/resnet50-0676ba61.pth
 ```
 
-`config.py` autodetecta esos `.pth` en `/kaggle/input/*/` (o seteá
-`CATTLE_PRETRAINED_DIR`). Si no los encuentra, `models.py` los baja por internet.
+`config.py` autodetecta esos `.pth` **por nombre de archivo**: en Kaggle bajo
+`/kaggle/input/*/`, y en local en cualquier subcarpeta que los contenga (p.ej.
+`imagenet-pretrained/` o `pretrained_weights/`). Override con `CATTLE_PRETRAINED_DIR`.
+Si no los encuentra, `models.py` los baja por internet.
+
+**Subir los datasets a Kaggle (automatizado).** En vez de la UI, `scripts/kaggle_upload.py`
+sube ambos datasets con `kagglehub` (rutas derivadas de `config.py`). Correr desde el
+checkout local que tiene la data:
+
+```bash
+pip install kagglehub
+export KAGGLE_USERNAME=tu_usuario KAGGLE_KEY=xxxxxxxx   # kaggle.com → Settings → API
+python scripts/kaggle_upload.py --user tu_usuario        # sube imágenes + pesos
+python scripts/kaggle_upload.py --user tu_usuario --only weights --version-notes "v2"
+```
+
+Sube `data_local/` (preserva la carpeta `BeefCattle_Muzzle_Individualized/`) y la
+carpeta de pesos. **No commitear credenciales** (`KAGGLE_KEY` va por entorno).
 
 ### Fase 4 — backbone propio ResNet-50 (implementada)
 

@@ -160,6 +160,9 @@ def _find_pretrained_dir() -> Path | None:
 
     for base in [PROJECT_ROOT, *PROJECT_ROOT.parents]:
         candidates.append(base / "pretrained_weights")
+        # ...o cualquier subcarpeta inmediata que contenga los .pth (detección por
+        # NOMBRE DE ARCHIVO, igual que en Kaggle): así también sirve imagenet-pretrained/.
+        candidates += [p.parent for p in base.glob(f"*/{any_file}")]
 
     for c in candidates:
         if (c / any_file).is_file():
