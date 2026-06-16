@@ -61,7 +61,22 @@ No son desviaciones (el paper no los fija), pero se documentan para reproducibil
 
 ---
 
-## D3 — (reservado)
+## D3 — Hardware: T4 en vez de P100 (no afecta la receta)
+
+**Paper / plan:** GPU **P100** (la que usó el paper; `plan.md` §5 la prefería).
+
+**Real:** la imagen actual de Kaggle trae un PyTorch compilado **sin soporte Pascal
+(sm_60)**, así que la P100 tira `CUDA error: no kernel image is available for execution`
+en el primer forward. Entrenamos en **GPU T4 ×2** (Turing, sm_75), que sí está en las
+capabilities soportadas por ese PyTorch (sm_70–sm_120). Se usa una sola T4 (`cuda:0`).
+
+**Impacto en resultados:** ninguno. Es solo el dispositivo de cómputo; la receta
+(resolución, normalización, optimizador, losses, épocas, seeds) no cambia. Puede variar
+levemente el tiempo por época y el redondeo numérico de bajo nivel, no la metodología.
+
+---
+
+## D4 — (reservado)
 
 Anotar acá cualquier desviación futura (resolución, normalización, optimizador,
 descongelar backbone, etc.) con su justificación **antes** de aplicarla.
