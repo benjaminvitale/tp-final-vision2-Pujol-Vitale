@@ -63,6 +63,12 @@ def make_dataloader(entries: list[dict], transform, *, shuffle: bool,
                     return_path: bool = False) -> DataLoader:
     """Construye un DataLoader sobre un split ya cargado."""
     ds = MuzzleDataset(entries, transform=transform, return_path=return_path)
+    # persistent_workers: con 50 épocas evita recrear los workers en cada época
+    # (solo aplica si num_workers > 0). No cambia datos ni resultados, solo velocidad.
+    extra = {}
+    if num_workers > 0:
+        extra["persistent_workers"] = True
+        extra["prefetch_factor"] = 4
     return DataLoader(
         ds,
         batch_size=batch_size,
@@ -70,4 +76,5 @@ def make_dataloader(entries: list[dict], transform, *, shuffle: bool,
         num_workers=num_workers,
         pin_memory=torch.cuda.is_available(),
         drop_last=False,
+        **extra,
     )
