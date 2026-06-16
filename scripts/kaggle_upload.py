@@ -11,8 +11,12 @@ en `/kaggle/input/`:
 
 Las rutas se derivan de `config.py` (single source of truth), no se hardcodean.
 
-Credenciales (NO commitear): KAGGLE_USERNAME + KAGGLE_KEY en el entorno, o
-`~/.kaggle/kaggle.json`. Crear el token en kaggle.com → Settings → API → Create New Token.
+Credenciales (NO commitear), cualquiera de:
+  - `KAGGLE_API_TOKEN=KGAT_...` (token nuevo de Kaggle; requiere kagglehub>=0.4.1),
+  - `KAGGLE_USERNAME` + `KAGGLE_KEY` en el entorno,
+  - `~/.kaggle/kaggle.json`.
+Generá el token en kaggle.com → Settings → API. El dueño del dataset (--user) debe
+coincidir con tu usuario de Kaggle.
 
 Correr desde el checkout local que tiene la data (no desde Kaggle ni desde el worktree):
 
@@ -38,13 +42,17 @@ import config  # noqa: E402
 
 def _require_auth() -> None:
     """Falla temprano y claro si no hay credenciales de Kaggle."""
+    # Token de API nuevo (KGAT_...): requiere kagglehub >= 0.4.1.
+    if os.environ.get("KAGGLE_API_TOKEN"):
+        return
     if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
         return
     if (Path.home() / ".kaggle" / "kaggle.json").is_file():
         return
     raise SystemExit(
-        "Faltan credenciales de Kaggle. Exportá KAGGLE_USERNAME + KAGGLE_KEY, o poné "
-        "~/.kaggle/kaggle.json (kaggle.com → Settings → API → Create New Token)."
+        "Faltan credenciales de Kaggle. Opciones: (1) KAGGLE_API_TOKEN=KGAT_... "
+        "(token nuevo; necesita kagglehub>=0.4.1), (2) KAGGLE_USERNAME + KAGGLE_KEY, "
+        "o (3) ~/.kaggle/kaggle.json. Generá el token en kaggle.com → Settings → API."
     )
 
 
