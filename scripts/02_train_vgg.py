@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config  # noqa: E402
 from src.evaluate import evaluate_checkpoint  # noqa: E402
 from src.train import RunConfig, train_one_run  # noqa: E402
-from src.utils import get_device, get_logger, save_json  # noqa: E402
+from src.utils import get_device, get_logger, load_json, save_json  # noqa: E402
 
 VARIANTS = {
     "ce":     {"loss_kind": "ce",  "use_aug": False},
@@ -52,6 +52,8 @@ def main() -> int:
     ap.add_argument("--model", default="vgg16_bn")
     ap.add_argument("--smoke", action="store_true",
                     help="Pipeline rápido: 1 semilla, 2 épocas, subset chico, sin pesos ImageNet.")
+    ap.add_argument("--fresh", action="store_true",
+                    help="Ignorar progreso previo (de una corrida cortada) y arrancar de cero.")
     args = ap.parse_args()
 
     log = get_logger("02_train_vgg")
@@ -70,11 +72,30 @@ def main() -> int:
     log.info(f"device={device} | model={args.model} | variants={args.variants} | "
              f"seeds={seeds} | epochs={epochs} | smoke={smoke}")
 
+    out = config.RESULTS_DIR / ("02_vgg_summary_smoke.json" if smoke else "02_vgg_summary.json")
+    # Progreso intermedio: se reescribe después de cada (variante, semilla) para poder
+    # retomar el sweep si el entorno se desconecta a mitad de camino (p.ej. Colab/Kaggle).
+    progress_path = out.with_suffix(".progress.json")
+
     results: dict[str, list[dict]] = {v: [] for v in args.variants}
+    done: set[tuple[str, int]] = set()
+
+    if not smoke and not args.fresh and progress_path.exists():
+        prev = load_json(progress_path)
+        for variant, runs in prev.get("results", {}).items():
+            if variant in results:
+                results[variant] = list(runs)
+                done.update((variant, r["seed"]) for r in runs)
+        if done:
+            log.info(f"Retomando sweep: {len(done)} corrida(s) ya completadas "
+                     f"({progress_path}). Usar --fresh para ignorar y arrancar de cero.")
 
     for variant in args.variants:
         spec = VARIANTS[variant]
         for seed in seeds:
+            if (variant, seed) in done:
+                log.info(f"[{variant} s{seed}] ya completada, salteando.")
+                continue
             rc = RunConfig(
                 model_name=args.model, loss_kind=spec["loss_kind"], use_aug=spec["use_aug"],
                 seed=seed, epochs=epochs, pretrained=pretrained,
@@ -98,6 +119,9 @@ def main() -> int:
                 "checkpoint": run["checkpoint"],
                 "perclass_csv": str(csv_path),
             })
+            if not smoke:
+                save_json({"model": args.model, "epochs": epochs, "seeds": seeds,
+                          "device": device, "results": results}, progress_path)
 
     # ---- Resumen media ± std por variante ----
     summary = {}
@@ -113,7 +137,6 @@ def main() -> int:
             "runs": runs,
         }
 
-    out = config.RESULTS_DIR / ("02_vgg_summary_smoke.json" if smoke else "02_vgg_summary.json")
     save_json({"model": args.model, "epochs": epochs, "seeds": seeds,
                "device": device, "smoke": smoke, "summary": summary}, out)
 
