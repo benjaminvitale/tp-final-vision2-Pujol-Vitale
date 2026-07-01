@@ -1,16 +1,14 @@
 """reid_dataset.py — entries + split gallery/probe por identidad (Fase 6).
 
-Dos formas de partir gallery/probe:
+Splits:
+- `split_gallery_probe`: al azar dentro de cada individuo.
+- `split_gallery_probe_by_session`: agrupa por SESIÓN (timestamp del nombre) y no parte una
+  sesión entre gallery y probe (evita matchear fotos gemelas de la misma ráfaga).
 
-- `split_gallery_probe`: al azar dentro de cada individuo. Simple, pero si las fotos de un
-  individuo son casi idénticas (misma ráfaga), infla el número (el modelo matchea gemelas).
-
-- `split_gallery_probe_by_session`: agrupa por SESIÓN y nunca parte una sesión entre gallery
-  y probe → el probe se matchea contra fotos de OTRA sesión, no contra su gemela. Es el split
-  honesto cuando el dataset tiene varias tomas por individuo (p.ej. Ahmed).
-
-Sesión = el nombre del archivo sin el sufijo `-NN` de enumeración dentro de la ráfaga.
-Ej: `IMG20230727070509-00.jpg`, `-01`, `-02` → misma sesión `IMG20230727070509`.
+`gallery_shots`: si se pasa (p.ej. 1 = single-shot), la gallery lleva exactamente ese número
+de imágenes (o sesiones) por individuo y el resto va a probe. Single-shot reduce la fuga por
+fotos parecidas: al haber una sola referencia por individuo, es más difícil acertar por
+similitud de foto en vez de por biometría.
 """
 from __future__ import annotations
 
@@ -44,8 +42,9 @@ def entries_from_folders(root: Path, max_per_id: int | None = None) -> tuple[lis
 
 
 def split_gallery_probe(entries: list[dict], seed: int = 0, min_images: int = 2,
-                        gallery_frac: float = 0.5) -> tuple[list[dict], list[dict], dict]:
-    """Split al azar por individuo (no honesto si hay fotos gemelas)."""
+                        gallery_frac: float = 0.5,
+                        gallery_shots: int | None = None) -> tuple[list[dict], list[dict], dict]:
+    """Split al azar por individuo. `gallery_shots` fija cuántas imágenes van a gallery/id."""
     by_label: dict[int, list[dict]] = {}
     for e in entries:
         by_label.setdefault(e["label"], []).append(e)
@@ -56,24 +55,25 @@ def split_gallery_probe(entries: list[dict], seed: int = 0, min_images: int = 2,
             dropped += 1
             continue
         items = items[:]; rng.shuffle(items)
-        n_gal = min(max(1, round(len(items) * gallery_frac)), len(items) - 1)
+        if gallery_shots is not None:
+            n_gal = min(gallery_shots, len(items) - 1)   # al menos 1 a probe
+        else:
+            n_gal = min(max(1, round(len(items) * gallery_frac)), len(items) - 1)
         gallery += items[:n_gal]; probe += items[n_gal:]; used += 1
-    info = {"split": "random", "n_ids_total": len(by_label), "n_ids_used": used,
+    info = {"split": "single_shot" if gallery_shots == 1 else "random",
+            "gallery_shots": gallery_shots, "n_ids_total": len(by_label), "n_ids_used": used,
             "n_ids_dropped": dropped, "n_gallery": len(gallery), "n_probe": len(probe)}
     return gallery, probe, info
 
 
 def split_gallery_probe_by_session(entries: list[dict], seed: int = 0, min_sessions: int = 2,
-                                   gallery_frac: float = 0.5) -> tuple[list[dict], list[dict], dict]:
-    """Split HONESTO: por sesión. Una sesión entera va a gallery O a probe, nunca partida.
-
-    Individuos con < min_sessions sesiones se descartan (no se pueden separar).
-    """
-    # label -> {session_id: [entries]}
+                                   gallery_frac: float = 0.5,
+                                   gallery_shots: int | None = None
+                                   ) -> tuple[list[dict], list[dict], dict]:
+    """Split por sesión. `gallery_shots` = cuántas SESIONES van a gallery por individuo."""
     by_label: dict[int, dict[str, list[dict]]] = {}
     for e in entries:
         by_label.setdefault(e["label"], {}).setdefault(session_id(e["path"]), []).append(e)
-
     rng = random.Random(seed)
     gallery, probe, used, dropped, tot_sessions = [], [], 0, 0, 0
     for lab, sessions in sorted(by_label.items()):
@@ -82,13 +82,16 @@ def split_gallery_probe_by_session(entries: list[dict], seed: int = 0, min_sessi
             dropped += 1
             continue
         rng.shuffle(sids)
-        n_gal = min(max(1, round(len(sids) * gallery_frac)), len(sids) - 1)
+        if gallery_shots is not None:
+            n_gal = min(gallery_shots, len(sids) - 1)
+        else:
+            n_gal = min(max(1, round(len(sids) * gallery_frac)), len(sids) - 1)
         gal_sids = set(sids[:n_gal])
         for sid in sids:
             (gallery if sid in gal_sids else probe).extend(sessions[sid])
-        used += 1
-        tot_sessions += len(sids)
-    info = {"split": "by_session", "n_ids_total": len(by_label), "n_ids_used": used,
+        used += 1; tot_sessions += len(sids)
+    info = {"split": "by_session_single" if gallery_shots == 1 else "by_session",
+            "gallery_shots": gallery_shots, "n_ids_total": len(by_label), "n_ids_used": used,
             "n_ids_dropped_lt_min_sessions": dropped, "min_sessions": min_sessions,
             "avg_sessions_per_id": round(tot_sessions / max(used, 1), 2),
             "n_gallery": len(gallery), "n_probe": len(probe)}
