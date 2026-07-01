@@ -1,15 +1,15 @@
 """06_eval_reid.py — Harness de re-ID (Fase 6): sanity + gap + baseline ImageNet.
 
-- SANITY intra-CMPD300 (`--source-dir`): valida el harness (identidades vistas → Rank-1 alto).
+- SANITY intra-CMPD300 (`--source-dir`): valida el harness (Rank-1 alto esperado).
 - GAP crudo hocico→cara (`--target-dir`): encoder de hocico sobre caras de Ahmed, sin adaptar.
-- Con `--compare-imagenet`: además evalúa un ResNet-50 de ImageNet PURO sobre EL MISMO split
-  gallery/probe del target. Sirve para detectar si el número está inflado por fotos parecidas
-  dentro de cada individuo (fuga por sesión): si ImageNet puro da casi igual que tu encoder,
-  el rendimiento es "gratis" y no mide reconocimiento de hocico.
+- `--by-session`: split gallery/probe HONESTO por sesión (evita matchear fotos gemelas de la
+  misma ráfaga). Recomendado para Ahmed. Sin este flag, el split del target es al azar.
+- `--compare-imagenet`: además evalúa ResNet-50 de ImageNet puro sobre EL MISMO split. Si
+  ImageNet iguala a tu encoder, el número no mide reconocimiento de hocico.
 
 Uso:
     python scripts/06_eval_reid.py --source-dir .../train --target-dir .../ahmed_subset \\
-                                   --max-per-id 10 --compare-imagenet
+                                   --by-session --compare-imagenet
 """
 from __future__ import annotations
 
@@ -22,7 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config
 from src.reid.embeddings import EmbeddingExtractor
 from src.reid.eval_reid import rank_metrics
-from src.reid.reid_dataset import entries_from_folders, split_gallery_probe
+from src.reid.reid_dataset import (entries_from_folders, split_gallery_probe,
+                                   split_gallery_probe_by_session)
 from src.utils import get_logger, save_json
 
 
@@ -37,10 +38,13 @@ def main() -> None:
     ap.add_argument("--ckpt", default=str(config.CHECKPOINTS_DIR / "cmpd300_source.pt"))
     ap.add_argument("--source-dir", default=None, help="CMPD300/train para el sanity.")
     ap.add_argument("--target-dir", default=None, help="caras de Ahmed para el gap.")
+    ap.add_argument("--by-session", action="store_true",
+                    help="split honesto por sesión en el target (evita fotos gemelas).")
     ap.add_argument("--compare-imagenet", action="store_true",
                     help="además evaluar ImageNet puro sobre el mismo split del target.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--min-images", type=int, default=2)
+    ap.add_argument("--min-sessions", type=int, default=2)
     ap.add_argument("--max-per-id", type=int, default=None)
     ap.add_argument("--batch-size", type=int, default=64)
     args = ap.parse_args()
@@ -53,7 +57,7 @@ def main() -> None:
     source = EmbeddingExtractor.from_checkpoint(Path(args.ckpt))
     results = {"ckpt": args.ckpt}
 
-    # ---- SANITY intra-CMPD300 ----
+    # ---- SANITY intra-CMPD300 (split al azar; CMPD300 no tiene sesiones) ----
     if args.source_dir:
         log.info("== SANITY intra-CMPD300 (identidades VISTAS → plomería) ==")
         entries, _ = entries_from_folders(Path(args.source_dir), max_per_id=args.max_per_id)
@@ -64,38 +68,44 @@ def main() -> None:
 
     # ---- GAP sobre Ahmed (mismo split para todos los encoders) ----
     if args.target_dir:
-        log.info("== GAP crudo hocico→cara sobre Ahmed (sin adaptar) ==")
+        mode = "POR SESIÓN (honesto)" if args.by_session else "al azar"
+        log.info(f"== GAP crudo hocico→cara sobre Ahmed — split {mode} ==")
         entries, _ = entries_from_folders(Path(args.target_dir), max_per_id=args.max_per_id)
-        gal, prb, info = split_gallery_probe(entries, seed=args.seed, min_images=args.min_images)
-        log.info(f"  {info['n_ids_used']} individuos | gallery={info['n_gallery']} "
-                 f"probe={info['n_probe']} (descartados {info['n_ids_dropped_lt_min']})")
+        if args.by_session:
+            gal, prb, info = split_gallery_probe_by_session(
+                entries, seed=args.seed, min_sessions=args.min_sessions)
+        else:
+            gal, prb, info = split_gallery_probe(entries, seed=args.seed, min_images=args.min_images)
+        log.info(f"  {info['n_ids_used']} individuos usados | gallery={info['n_gallery']} "
+                 f"probe={info['n_probe']} | info={info}")
+        if not gal or not prb:
+            log.error("gallery o probe vacíos (¿pocos individuos con ≥2 sesiones?)."); sys.exit(1)
 
         m_src = score(source, gal, prb, Path(args.target_dir), args.batch_size)
-        results["gap_ahmed_source"] = {**m_src, **info,
-                                       "encoder": source.name, "nota": "encoder de hocico, sin adaptar"}
+        results["gap_ahmed_source"] = {**m_src, **info, "encoder": source.name}
         log.info(f"  source(hocico) -> Rank-1={m_src['rank1']:.4f} mAP={m_src['mAP']:.4f}")
 
         if args.compare_imagenet:
             imagenet = EmbeddingExtractor.from_imagenet()
             m_in = score(imagenet, gal, prb, Path(args.target_dir), args.batch_size)
-            results["gap_ahmed_imagenet"] = {**m_in, "encoder": "imagenet_resnet50",
-                                             "nota": "baseline tonto (sin hocico); mismo split"}
+            results["gap_ahmed_imagenet"] = {**m_in, "encoder": "imagenet_resnet50"}
             log.info(f"  imagenet(puro) -> Rank-1={m_in['rank1']:.4f} mAP={m_in['mAP']:.4f}")
 
     out = config.RESULTS_DIR / "06_reid_summary.json"
     save_json(results, out)
     log.info(f"resumen guardado en {out}")
 
-    # ---- resumen legible + interpretación ----
+    # ---- resumen legible ----
     print("\n" + "=" * 66)
-    print("FASE 6 — RE-ID")
+    print("FASE 6 — RE-ID" + ("  (split por sesión)" if args.by_session else ""))
     print("=" * 66)
     if "sanity_cmpd300" in results:
         s = results["sanity_cmpd300"]
         print(f"SANITY CMPD300 (plomería)   : Rank-1={s['rank1']:.3f}  mAP={s['mAP']:.3f}")
     if "gap_ahmed_source" in results:
         g = results["gap_ahmed_source"]
-        print(f"Ahmed — encoder de hocico   : Rank-1={g['rank1']:.3f}  mAP={g['mAP']:.3f}")
+        print(f"Ahmed — encoder de hocico   : Rank-1={g['rank1']:.3f}  mAP={g['mAP']:.3f}"
+              f"  ({g['n_ids_used']} ids, {g['n_probe']} probes)")
     if "gap_ahmed_imagenet" in results:
         i = results["gap_ahmed_imagenet"]
         print(f"Ahmed — ImageNet PURO       : Rank-1={i['rank1']:.3f}  mAP={i['mAP']:.3f}")
@@ -103,10 +113,10 @@ def main() -> None:
         print("-" * 66)
         print(f"Ventaja del encoder de hocico sobre ImageNet: {d:+.3f} en Rank-1")
         if d < 0.05:
-            print("⚠ Ventaja chica: el número parece 'gratis' (fotos parecidas por individuo),")
-            print("  no reconocimiento de hocico. El gap crudo NO es confiable así.")
+            print("⚠ Ventaja chica: aún con split por sesión, el encoder de hocico no aporta")
+            print("  sobre ImageNet. La variación entre sesiones no alcanza → hablar con Gastón.")
         else:
-            print("✓ El encoder de hocico aporta sobre ImageNet: hay señal real.")
+            print("✓ El encoder de hocico aporta sobre ImageNet: hay señal real de hocico.")
     print("=" * 66)
 
 
