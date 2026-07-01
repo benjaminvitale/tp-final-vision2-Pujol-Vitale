@@ -5,8 +5,13 @@ Receta del paper (ver plan.md / config.py):
 - Solo se optimizan los parámetros entrenables (con freeze_backbone, solo las FC).
 - Se trackea val accuracy por época y se guarda el MEJOR checkpoint por val acc.
 
-`train_one_run` es la unidad reusada por los scripts de Fase 3/4. Soporta subsetear
+`train_one_run` es la unidad reusada por los scripts de Fase 3/4/5. Soporta subsetear
 (max_train/max_val) y bajar épocas para smoke-tests rápidos del pipeline.
+
+Etapa 2 (aditivo, backward-compatible): RunConfig acepta `data_dir`, `splits_dir`,
+`num_classes`, `image_size` y `use_precomputed_aug`. Con todos en None/default el
+comportamiento es EXACTAMENTE el de la Etapa 1 (dataset del paper). Pasándolos se puede
+entrenar sobre otro dataset (p.ej. CMPD300) reusando este mismo loop, sin reimplementarlo.
 """
 from __future__ import annotations
 
@@ -46,6 +51,13 @@ class RunConfig:
     # subset para smoke-tests (None = dataset completo)
     max_train: int | None = None
     max_val: int | None = None
+    # --- Etapa 2 (None = defaults de la Etapa 1 / dataset del paper) ---
+    data_dir: str | None = None          # raíz de imágenes (p.ej. str(config.CMPD300_DIR))
+    splits_dir: str | None = None        # carpeta de los JSON de split
+    num_classes: int | None = None       # nº de clases del dataset (CMPD300: del label_map)
+    image_size: int | None = None        # lado de entrada (Etapa 2: 224)
+    use_precomputed_aug: bool = True      # False para datasets sin cache de aug (CMPD300)
+    init_from: str | None = None          # warm-start del backbone desde un checkpoint propio
 
 
 def _maybe_subset(entries: list[dict], n: int | None) -> list[dict]:
@@ -82,30 +94,43 @@ def train_one_run(rc: RunConfig, device: str | None = None,
     log = get_logger(f"train.{tag}", logfile=config.LOGS_DIR / f"{tag}.log")
     config.ensure_output_dirs()
 
+    # --- Resolución de fuentes (Etapa 2 si se pasan; si no, defaults Etapa 1) ---
+    data_dir = Path(rc.data_dir) if rc.data_dir else config.DATA_DIR
+    splits_dir = Path(rc.splits_dir) if rc.splits_dir else config.SPLITS_DIR
+    num_classes = rc.num_classes if rc.num_classes is not None else config.NUM_CLASSES
+    image_size = rc.image_size if rc.image_size is not None else config.IMAGE_SIZE
+
     log.info(f"=== RUN {tag} | device={device} ===")
     log.info(f"config: {asdict(rc)}")
+    log.info(f"data_dir={data_dir} | splits_dir={splits_dir} | "
+             f"num_classes={num_classes} | image_size={image_size}")
 
     # ---- Datos ----
     # PAPER: la augmentation CREA imágenes sintéticas y AGRANDA el dataset (mantiene los
     # originales a brillo real), no reemplaza cada imagen. Originales → transform limpio;
     # copias sintéticas → augmentation. Ver dataset.make_train_loader / DEVIATIONS D4.
-    clean_tf = build_transforms(train=False, use_imagenet_norm=rc.use_imagenet_norm)
-    aug_tf = build_transforms(train=True, use_imagenet_norm=rc.use_imagenet_norm)
-    train_e = _maybe_subset(load_split("train"), rc.max_train)
-    val_e = _maybe_subset(load_split("val"), rc.max_val)
+    clean_tf = build_transforms(train=False, image_size=image_size,
+                                use_imagenet_norm=rc.use_imagenet_norm)
+    aug_tf = build_transforms(train=True, image_size=image_size,
+                              use_imagenet_norm=rc.use_imagenet_norm)
+    train_e = _maybe_subset(load_split("train", splits_dir=splits_dir), rc.max_train)
+    val_e = _maybe_subset(load_split("val", splits_dir=splits_dir), rc.max_val)
     train_loader = make_train_loader(train_e, use_aug=rc.use_aug, clean_tf=clean_tf,
                                      aug_tf=aug_tf, seed=rc.seed,
                                      batch_size=rc.batch_size, num_workers=rc.num_workers,
-                                     # con subset (smoke) NO usar el cache precomputado del set completo
-                                     use_precomputed=(rc.max_train is None))
-    val_loader = make_dataloader(val_e, clean_tf, shuffle=False,
+                                     data_dir=data_dir,
+                                     # con subset (smoke) o datasets sin cache NO usar el
+                                     # cache precomputado (es del dataset del paper).
+                                     use_precomputed=(rc.max_train is None and rc.use_precomputed_aug))
+    val_loader = make_dataloader(val_e, clean_tf, shuffle=False, data_dir=data_dir,
                                  batch_size=rc.batch_size, num_workers=rc.num_workers)
     log.info(f"train imgs: {len(train_loader.dataset):,} (use_aug={rc.use_aug}) | "
              f"val imgs: {len(val_e):,}")
 
     # ---- Modelo / loss / optimizador ----
-    model = build_model(rc.model_name, num_classes=config.NUM_CLASSES,
-                        freeze_backbone=rc.freeze_backbone, pretrained=rc.pretrained).to(device)
+    model = build_model(rc.model_name, num_classes=num_classes,
+                        freeze_backbone=rc.freeze_backbone, pretrained=rc.pretrained,
+                        init_from=rc.init_from).to(device)
     tr, tot = count_parameters(model)
     log.info(f"params entrenables: {tr:,}/{tot:,} ({100*tr/tot:.1f}%)")
 
@@ -132,7 +157,7 @@ def train_one_run(rc: RunConfig, device: str | None = None,
             torch.save({
                 "model_state": model.state_dict(),
                 "model_name": rc.model_name,
-                "num_classes": config.NUM_CLASSES,
+                "num_classes": num_classes,
                 "epoch": epoch,
                 "val_acc": va_acc,
                 "run_config": asdict(rc),

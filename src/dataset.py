@@ -6,6 +6,10 @@ Los splits se generan una sola vez con `scripts/01_make_splits.py` y se guardan 
 Las rutas en los JSON son RELATIVAS a `config.DATA_DIR`, así el mismo split funciona
 en Kaggle y en local sin reescribir paths.
 
+Etapa 2: `make_dataloader` y `make_train_loader` aceptan `data_dir` (default
+`config.DATA_DIR`) para poder apuntar a otro dataset —p.ej. `config.CMPD300_DIR`—
+reusando el mismo Dataset y los mismos splits JSON.
+
 Diseño preparado para la fase futura de embeddings: `MuzzleDataset` devuelve
 (imagen, label) y opcionalmente el path, suficiente para gallery/probe más adelante.
 """
@@ -81,9 +85,15 @@ def _make_loader(ds, *, shuffle: bool, batch_size: int, num_workers: int) -> Dat
 def make_dataloader(entries: list[dict], transform, *, shuffle: bool,
                     batch_size: int = config.BATCH_SIZE,
                     num_workers: int = config.NUM_WORKERS,
+                    data_dir: Path = config.DATA_DIR,
                     return_path: bool = False) -> DataLoader:
-    """Construye un DataLoader sobre un split ya cargado (un solo transform para todo)."""
-    ds = MuzzleDataset(entries, transform=transform, return_path=return_path)
+    """Construye un DataLoader sobre un split ya cargado (un solo transform para todo).
+
+    `data_dir` (Etapa 2): raíz desde la que se resuelven las rutas de las entradas.
+    Default = config.DATA_DIR (dataset del paper); pasar config.CMPD300_DIR para CMPD300.
+    """
+    ds = MuzzleDataset(entries, transform=transform, data_dir=data_dir,
+                       return_path=return_path)
     return _make_loader(ds, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers)
 
 
@@ -124,7 +134,8 @@ def make_train_loader(entries: list[dict], *, use_aug: bool, clean_tf, aug_tf,
                       cap: int = config.AUG_TARGET_CAP,
                       factor: int = config.AUG_FACTOR,
                       use_precomputed: bool = True,
-                      aug_cache_dir: Path = config.AUG_CACHE_DIR) -> DataLoader:
+                      aug_cache_dir: Path = config.AUG_CACHE_DIR,
+                      data_dir: Path = config.DATA_DIR) -> DataLoader:
     """Loader de train.
 
     - `use_aug=False`: originales con transform limpio (variantes ce / wce).
@@ -134,9 +145,13 @@ def make_train_loader(entries: list[dict], *, use_aug: bool, clean_tf, aug_tf,
 
     Para las copias sintéticas, si `use_precomputed` y existe el manifest de
     `scripts/04_precompute_aug.py`, se usan las imágenes FIJAS de disco (transform limpio,
-    ya están aumentadas). Si no, se generan online con `aug_tf` (fallback; p.ej. en smoke).
+    ya están aumentadas). Si no, se generan online con `aug_tf` (fallback; p.ej. en smoke o
+    para datasets sin cache como CMPD300 → pasar use_precomputed=False).
+
+    `data_dir` (Etapa 2): raíz de las rutas de las entradas originales y de las copias
+    online. (El cache precomputado sigue resolviéndose contra `aug_cache_dir`.)
     """
-    clean_ds = MuzzleDataset(entries, transform=clean_tf)
+    clean_ds = MuzzleDataset(entries, transform=clean_tf, data_dir=data_dir)
     if not use_aug:
         return _make_loader(clean_ds, shuffle=True, batch_size=batch_size, num_workers=num_workers)
 
@@ -147,6 +162,6 @@ def make_train_loader(entries: list[dict], *, use_aug: bool, clean_tf, aug_tf,
     else:
         # Fallback online: aumentar al vuelo (mismo criterio de expansión).
         extra = build_augmented_entries(entries, cap=cap, factor=factor, seed=seed)
-        aug_ds = MuzzleDataset(extra, transform=aug_tf)
+        aug_ds = MuzzleDataset(extra, transform=aug_tf, data_dir=data_dir)
     train_ds = ConcatDataset([clean_ds, aug_ds])
     return _make_loader(train_ds, shuffle=True, batch_size=batch_size, num_workers=num_workers)
