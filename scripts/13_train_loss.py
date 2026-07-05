@@ -179,7 +179,7 @@ def main() -> int:
         msg += f" | lr {optimizer.param_groups[0]['lr']:.2e}"
         log.info(msg)
 
-    out = Path(args.out) if args.out else config.CHECKPOINTS_DIR / f"cmpd300_{args.loss}_s{args.seed}.pt"
+    out = Path(args.out) if args.out else config.CHECKPOINTS_DIR / f"cmpd300_{args.loss}.pt"
     out.parent.mkdir(parents=True, exist_ok=True)
     torch.save({"model_state": model.export_state_dict(num_classes), "model_name": "resnet50",
                 "num_classes": num_classes,
@@ -188,7 +188,7 @@ def main() -> int:
     summary = {"loss": args.loss, "seed": args.seed, "num_classes": num_classes,
                "epochs": epochs, "P": P, "K": K, "image_size": args.image_size,
                "checkpoint": str(out), "elapsed_sec": round(time.time() - t0, 1)}
-    save_json(summary, config.RESULTS_DIR / f"13_train_{args.loss}_s{args.seed}.json")
+    save_json(summary, config.RESULTS_DIR / f"13_train_{args.loss}.json")
     log.info(f"saved {args.loss} encoder → {out} | {summary}")
     return 0
 

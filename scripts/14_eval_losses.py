@@ -1,23 +1,22 @@
 """14_eval_losses.py — Evaluate the 4-loss encoders (+ baselines) on Zenodo (Stage 3).
 
 Same pipeline for every run: pHash-dedup the target → embed (backbone 2048-d, L2-norm) →
-HDBSCAN (ARI = PRIMARY) + NMI + #clusters, plus secondary k-means(real-k) and kNN. Per
-loss it aggregates over seeds (mean ± std) and reports the delta over CE-with-augmentation
-so the loss effect is isolated from the augmentation effect. Baselines (ImageNet, DINOv2)
-are frozen references — the bar to beat "robustly" (outside the std).
+HDBSCAN (ARI = PRIMARY) + NMI + #clusters, plus secondary k-means(real-k) and kNN. One run
+per loss (no seed sweep); reports the delta over CE-with-augmentation so the loss effect is
+isolated from the augmentation effect. Baselines (ImageNet, DINOv2) are the frozen
+references to beat.
 
-Checkpoints are looked up as `<ckpt-dir>/cmpd300_<loss>_s<seed>.pt`.
+Checkpoints are looked up as `<ckpt-dir>/cmpd300_<loss>.pt`.
 
 Usage:
     python scripts/14_eval_losses.py --target-dir /path/to/zenodo \
         --ckpt-dir outputs/checkpoints --losses ce arcface supcon triplet \
-        --seeds 0 1 2 --baselines imagenet dinov2
+        --baselines imagenet dinov2
 """
 from __future__ import annotations
 
 import argparse
 import random
-import statistics
 import sys
 from pathlib import Path
 
@@ -61,21 +60,11 @@ def eval_embeddings(emb, lab, gal, prb, n_true, seed) -> dict:
             "rank1": round(r["rank1"], 4), "mAP": round(r["mAP"], 4)}
 
 
-def agg(runs: list[dict], key: str):
-    vals = [r[key] for r in runs if r.get(key) is not None]
-    if not vals:
-        return None, None
-    m = round(statistics.mean(vals), 4)
-    s = round(statistics.pstdev(vals), 4) if len(vals) > 1 else 0.0
-    return m, s
-
-
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--target-dir", default=str(config.TARGET_DIR))
     ap.add_argument("--ckpt-dir", default=str(config.CHECKPOINTS_DIR))
     ap.add_argument("--losses", nargs="*", default=["ce", "arcface", "supcon", "triplet"])
-    ap.add_argument("--seeds", nargs="*", type=int, default=[0, 1, 2])
     ap.add_argument("--baselines", nargs="*", default=["imagenet", "dinov2"])
     ap.add_argument("--phash-threshold", type=int, default=6)
     ap.add_argument("--no-phash", action="store_true", help="skip near-dup dedup (not recommended)")
@@ -108,7 +97,6 @@ def main() -> None:
     results = {"target": str(target), "n_ids": n_true, "n_eval_images": len(entries),
                "phash": not args.no_phash, "per_loss": {}, "baselines": {}}
 
-    # baselines (single run each)
     for b in args.baselines:
         try:
             results["baselines"][b] = embed_and_eval(build_encoder(b))
@@ -116,26 +104,18 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001
             log.error(f"baseline {b} failed: {exc}"); results["baselines"][b] = {"error": str(exc)}
 
-    # losses × seeds
     ckdir = Path(args.ckpt_dir)
     for loss in args.losses:
-        runs = []
-        for sd in args.seeds:
-            ck = ckdir / f"cmpd300_{loss}_s{sd}.pt"
-            if not ck.is_file():
-                log.warning(f"missing checkpoint {ck} — skipping"); continue
-            try:
-                m = embed_and_eval(resnet50_checkpoint(ck))
-                m["seed"] = sd; runs.append(m)
-                log.info(f"{loss} s{sd}: ARI={m['hdbscan_ari']} nclust={m['n_clusters']}")
-            except Exception as exc:  # noqa: BLE001
-                log.error(f"{loss} s{sd} failed: {exc}")
-        if runs:
-            summary = {"n_seeds": len(runs), "runs": runs}
-            for k in ("hdbscan_ari", "hdbscan_nmi", "kmeans_ari", "rank1", "mAP", "n_clusters"):
-                m, s = agg(runs, k)
-                summary[k] = {"mean": m, "std": s}
-            results["per_loss"][loss] = summary
+        ck = ckdir / f"cmpd300_{loss}.pt"
+        if not ck.is_file():
+            log.warning(f"missing checkpoint {ck} — skipping"); continue
+        try:
+            m = embed_and_eval(resnet50_checkpoint(ck))
+            results["per_loss"][loss] = m
+            log.info(f"{loss}: HDBSCAN ARI={m['hdbscan_ari']} nclust={m['n_clusters']} "
+                     f"kmeans={m['kmeans_ari']} Rank-1={m['rank1']}")
+        except Exception as exc:  # noqa: BLE001
+            log.error(f"{loss} failed: {exc}")
 
     out = Path(args.out) if args.out else config.RESULTS_DIR / "14_loss_comparison.json"
     save_json(results, out)
@@ -144,28 +124,26 @@ def main() -> None:
 
 
 def _print_table(res: dict) -> None:
-    print("\n" + "=" * 84)
-    print("STAGE 3 — LOSS COMPARISON (PRIMARY = HDBSCAN ARI, mean±std over seeds)")
+    print("\n" + "=" * 82)
+    print("STAGE 3 — LOSS COMPARISON (PRIMARY = HDBSCAN ARI)")
     print(f"target: {res['target']}  |  {res['n_ids']} ids, {res['n_eval_images']} imgs "
           f"(pHash dedup={res['phash']})")
-    print("=" * 84)
-    print(f"  {'encoder':16} {'HDBSCAN ARI':>16} {'kmeans ARI':>12} {'Rank-1':>10} {'#clust':>8}")
-    print("  " + "-" * 66)
+    print("=" * 82)
+    print(f"  {'encoder':16} {'HDBSCAN ARI':>12} {'kmeans ARI':>11} {'Rank-1':>9} {'#clust':>8}")
+    print("  " + "-" * 60)
     for b, m in res["baselines"].items():
         if "error" in m:
             print(f"  {b:16} ERROR"); continue
-        print(f"  {b:16} {str(m['hdbscan_ari']):>16} {str(m['kmeans_ari']):>12} "
-              f"{str(m['rank1']):>10} {str(m['n_clusters']):>8}  (baseline)")
-    ce = res["per_loss"].get("ce", {}).get("hdbscan_ari", {}).get("mean")
-    for loss, s in res["per_loss"].items():
-        ari = s["hdbscan_ari"]
-        cell = f"{ari['mean']}±{ari['std']}"
-        delta = f"  Δce={ari['mean']-ce:+.3f}" if ce is not None and ari["mean"] is not None else ""
-        print(f"  {loss:16} {cell:>16} {str(s['kmeans_ari']['mean']):>12} "
-              f"{str(s['rank1']['mean']):>10} {str(s['n_clusters']['mean']):>8}{delta}")
-    print("=" * 84)
-    print("Bar = beat ImageNet/DINOv2 in HDBSCAN ARI robustly (outside the std). Δce isolates "
-          "the loss effect from the shared augmentation.")
+        print(f"  {b:16} {str(m['hdbscan_ari']):>12} {str(m['kmeans_ari']):>11} "
+              f"{str(m['rank1']):>9} {str(m['n_clusters']):>8}  (baseline)")
+    ce = res["per_loss"].get("ce", {}).get("hdbscan_ari")
+    for loss, m in res["per_loss"].items():
+        delta = f"  Δce={m['hdbscan_ari']-ce:+.3f}" if ce is not None and m["hdbscan_ari"] is not None else ""
+        print(f"  {loss:16} {str(m['hdbscan_ari']):>12} {str(m['kmeans_ari']):>11} "
+              f"{str(m['rank1']):>9} {str(m['n_clusters']):>8}{delta}")
+    print("=" * 82)
+    print("Bar = beat ImageNet/DINOv2 in HDBSCAN ARI. Δce isolates the loss effect from the "
+          "shared augmentation.")
 
 
 if __name__ == "__main__":
