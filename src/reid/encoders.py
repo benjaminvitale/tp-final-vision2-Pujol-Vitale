@@ -59,15 +59,24 @@ class Encoder:
 
     @torch.no_grad()
     def embed(self, entries: list[dict], data_dir: Path,
-              batch_size: int = 64, num_workers: int = 2) -> tuple[np.ndarray, np.ndarray]:
-        """entries [{path,label}] → (embeddings [N,D] L2-norm, labels [N]) in entry order."""
+              batch_size: int = 64, num_workers: int = 2,
+              corrupt=None) -> tuple[np.ndarray, np.ndarray]:
+        """entries [{path,label}] → (embeddings [N,D] L2-norm, labels [N]) in entry order.
+
+        `corrupt`: optional callable(tensor)->tensor applied to each preprocessed batch
+        just before the forward pass (for the input-ablation robustness tests). None = the
+        clean baseline.
+        """
         ds = MuzzleDataset(entries, transform=self.transform, data_dir=Path(data_dir))
         loader = torch.utils.data.DataLoader(
             ds, batch_size=batch_size, shuffle=False, num_workers=num_workers,
             pin_memory=torch.cuda.is_available())
         embs, labs = [], []
         for imgs, labels in loader:
-            feats = self.forward_fn(self.model, imgs.to(self.device))
+            imgs = imgs.to(self.device)
+            if corrupt is not None:
+                imgs = corrupt(imgs)
+            feats = self.forward_fn(self.model, imgs)
             feats = F.normalize(feats.flatten(1), dim=1)
             embs.append(feats.cpu().numpy())
             labs.append(np.asarray(labels))
