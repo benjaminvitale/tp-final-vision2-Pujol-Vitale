@@ -403,6 +403,44 @@ attends to when computing cosine similarity, helping explain why ImageNet matche
 
 ---
 
+## Stage 3 — Unsupervised cross-dataset re-ID by clustering (muzzle → muzzle)
+
+Frozen encoder → embed an **unlabelled** second muzzle dataset → **cluster** to discover
+the identities (estimating how many cattle there are) → evaluate against the real labels
+(labels used **only** to evaluate). Question: does specializing on muzzle help discover
+identities in a new field, or does a strong generic encoder group them just as well?
+
+**Phase 0 (this code):** the full circuit with DINOv2 as the generic baseline.
+
+```bash
+# DINOv2 + plain ImageNet, on the Zenodo Muzzle DB (target = unlabelled new field)
+python scripts/10_cluster_reid.py --target-dir /path/to/BeefCattle_Muzzle_Individualized \
+    --encoders dinov2 imagenet
+
+# add our muzzle-trained encoders (disjoint identities vs their CMPD300 training)
+python scripts/10_cluster_reid.py --target-dir /path/to/zenodo \
+    --encoders dinov2 imagenet resnet-ckpt --ckpt outputs/checkpoints/cmpd300_source.pt
+```
+
+On Colab use [`notebooks/colab_fase0_cluster.ipynb`](notebooks/colab_fase0_cluster.ipynb)
+(mounts Drive, extracts the zip, runs the script).
+
+Each encoder passes through the **same** pipeline; the only thing that changes is the
+encoder. Reported per encoder (`outputs/results/10_cluster_summary.json`):
+- **Clustering:** DBSCAN over an eps grid + HDBSCAN (auto) + k-means with the real *k*
+  (a "ceiling that cheats"). Metrics: **ARI, NMI**, clusters found vs real, noise fraction.
+  Reported on the full set **and** on a one-photo-per-session view (anti-burst).
+- **Retrieval (kNN):** Rank-1 / Rank-5 / mAP on the single-shot-by-session split.
+- **Session diagnostics:** whether the filename-based session split is even meaningful for
+  the dataset — if `session_split_is_meaningful=False`, the anti-burst control is weak and
+  the numbers may reflect photo similarity, not biometrics. **Read this first.**
+
+Modules: [`src/reid/encoders.py`](src/reid/encoders.py) (encoder zoo),
+[`src/reid/cluster.py`](src/reid/cluster.py) (clustering + metrics),
+session helpers in [`src/reid/reid_dataset.py`](src/reid/reid_dataset.py).
+
+---
+
 ## Reproducibility and integrity
 
 - Splits saved to disk in `outputs/splits/` and reused; never re-split between runs.

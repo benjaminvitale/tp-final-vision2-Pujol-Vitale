@@ -114,7 +114,24 @@ Override in `config.py` (`AUG_TARGET_CAP`, `AUG_FACTOR`).
 
 ---
 
-## D5 — (reserved)
+## D5 — Stage 3: per-encoder native preprocessing (clustering re-ID)
+
+In the unsupervised clustering stage each frozen encoder is fed its **own native
+preprocessing**, not a single shared recipe:
+- ResNet-50 (ImageNet baseline / our muzzle checkpoints): square resize 224 + ImageNet
+  normalization (the same as the Stage 2 re-ID baseline, so numbers stay comparable).
+- DINOv2 / ViT foundation encoders: resize shortest side 256 → center-crop 224 → ImageNet
+  normalization (their native recipe).
+
+**Why:** a foundation model is evaluated on the input distribution it was trained for;
+forcing a foreign preprocessing would handicap it and confound the comparison. What is
+held **identical across encoders** is the gallery/probe split and the clustering protocol
+— that is what must be controlled for a fair "generic vs specialized" comparison, not the
+pixel preprocessing. Values in `config.py` (`VIT_RESIZE`, `VIT_CROP`).
+
+---
+
+## D6 — (reserved)
 
 Record any future deviation here (resolution, normalization, optimizer,
 unfreezing backbone, etc.) with its justification **before** applying it.
