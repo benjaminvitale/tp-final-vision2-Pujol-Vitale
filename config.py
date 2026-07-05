@@ -241,6 +241,39 @@ IMAGE_SIZE_S2 = 224
 USE_IMAGENET_NORM_S2 = True
 
 
+# --------------------------------------------------------------------------- #
+# STAGE 3 — Unsupervised cross-dataset re-ID by clustering (muzzle → muzzle)
+# --------------------------------------------------------------------------- #
+# New field = a second muzzle dataset presented WITHOUT labels. A frozen encoder
+# embeds it, DBSCAN/HDBSCAN discovers the identities (estimating how many there are),
+# and we measure the partition against the real labels (ARI/NMI). Labels are used
+# ONLY to evaluate, never to cluster. See the Stage 3 plan for the full framing.
+#
+# TARGET_DIR: root of the unlabelled muzzle dataset (one folder per real individual,
+# used only for evaluation). By default it is the Zenodo Muzzle DB (`DATA_DIR`), but
+# it is overridable so the source encoder (trained on CMPD300) meets DISJOINT identities.
+TARGET_DIR = Path(os.environ.get("CATTLE_TARGET_DIR", str(DATA_DIR)))
+
+# DINOv2 (frozen, self-supervised generic baseline). HuggingFace model id.
+# dinov2-base = 768-d embedding; good speed/quality trade-off for a first pass.
+DINOV2_MODEL = os.environ.get("DINOV2_MODEL", "facebook/dinov2-base")
+
+# Preprocessing for ViT/foundation encoders (their native recipe, NOT the paper's):
+# resize shortest side then center-crop, ImageNet normalization. Documented in DEVIATIONS.
+VIT_RESIZE = 256
+VIT_CROP = 224
+
+# Clustering (DBSCAN over cosine distance on L2-normalized embeddings).
+# eps is the ONE hyperparameter to fix WITHOUT looking at labels. We report the whole
+# grid so its sensitivity is visible, plus HDBSCAN (auto, no eps) as the primary estimator.
+DBSCAN_EPS_GRID = (0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50)
+DBSCAN_MIN_SAMPLES = 2      # a core point needs >=1 other neighbour within eps.
+HDBSCAN_MIN_CLUSTER_SIZE = 2
+
+# Retrieval (kNN) evaluation runs on the honest session single-shot split.
+REID_SEED = 0
+
+
 def ensure_output_dirs() -> None:
     """Create output directories if they do not exist."""
     for d in (SPLITS_DIR, CHECKPOINTS_DIR, RESULTS_DIR, LOGS_DIR, CMPD300_SPLITS_DIR):
