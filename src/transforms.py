@@ -59,6 +59,30 @@ def _aug_ops() -> list:
     ]
 
 
+def build_strong_train_transform(image_size: int = config.IMAGE_SIZE_S2,
+                                 use_imagenet_norm: bool = config.USE_IMAGENET_NORM_S2
+                                 ) -> transforms.Compose:
+    """Strong augmentation FIXED across the 4-loss comparison (Stage 3 brief).
+
+    Targets the fragmentation causes the robustness probe found (rotation sensitivity,
+    context/background dependence): RandomResizedCrop varies how much surround is visible,
+    RandomRotation(±30) attacks pose sensitivity, ColorJitter for lighting, RandomErasing
+    forces not relying on any fixed region (incl. background), plus horizontal flip.
+    Identical in all four conditions — the ONLY variable is the loss.
+    """
+    ops: list = [
+        transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0), ratio=(0.8, 1.25)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(30),
+        transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
+        transforms.ToTensor(),
+    ]
+    if use_imagenet_norm:
+        ops.append(transforms.Normalize(config.IMAGENET_MEAN, config.IMAGENET_STD))
+    ops.append(transforms.RandomErasing(p=0.5, scale=(0.02, 0.2)))
+    return transforms.Compose(ops)
+
+
 def build_pil_aug_transform(image_size: int = config.IMAGE_SIZE) -> transforms.Compose:
     """Resize + augmentation, WITHOUT ToTensor → returns a PIL image.
 
