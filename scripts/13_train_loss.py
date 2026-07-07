@@ -137,6 +137,8 @@ def main() -> int:
                     help="feature backbone (dinov2 = fine-tune the ViT, unfrozen)")
     ap.add_argument("--aug", default="strong", choices=("strong", "heavy"),
                     help="strong = the 0.542 recipe; heavy = box-free muzzle-focus (harder)")
+    ap.add_argument("--grad-checkpoint", action="store_true",
+                    help="gradient checkpointing (dinov2) — fits ViT-large at batch 64, ~25%% slower")
     ap.add_argument("--P", type=int, default=16, help="identities per batch")
     ap.add_argument("--K", type=int, default=4, help="images per identity per batch")
     ap.add_argument("--lr", type=float, default=None,
@@ -184,6 +186,10 @@ def main() -> int:
 
     model = Encoder(args.loss, num_classes, backbone=args.backbone, pretrained=not args.smoke,
                     arc_s=args.arc_s, arc_m=args.arc_m).to(device)
+    if args.grad_checkpoint and args.backbone == "dinov2":
+        model.backbone.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs={"use_reentrant": False})
+        log.info("gradient checkpointing enabled (dinov2)")
     if args.loss in ("ce", "arcface"):
         criterion = nn.CrossEntropyLoss()
     elif args.loss == "supcon":
