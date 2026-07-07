@@ -163,6 +163,34 @@ def dinov2(model_id: str = config.DINOV2_MODEL, device: str | None = None) -> En
     return Encoder(model, _vit_tf(), forward_fn, model_id.split("/")[-1], device)
 
 
+def dinov2_checkpoint(ckpt_path: Path, device: str | None = None) -> Encoder:
+    """A DINOv2 ViT fine-tuned on muzzles (scripts/13_train_loss.py --backbone dinov2).
+
+    Loads the fine-tuned AutoModel weights and embeds with the SAME pooled-CLS forward as
+    the frozen `dinov2` baseline, so the comparison is apples-to-apples (768-d for -base).
+    """
+    device = device or get_device()
+    ckpt_path = Path(ckpt_path)
+    if not ckpt_path.is_file():
+        raise FileNotFoundError(f"Checkpoint {ckpt_path} does not exist.")
+    obj = torch.load(ckpt_path, map_location="cpu")
+    state = obj["model_state"] if isinstance(obj, dict) and "model_state" in obj else obj
+    model_id = (obj.get("run_config", {}) or {}).get("dinov2_model", config.DINOV2_MODEL)
+    try:
+        from transformers import AutoModel
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError("DINOv2 needs `transformers`: pip install transformers") from exc
+    model = AutoModel.from_pretrained(model_id)
+    model.load_state_dict(state)
+
+    def forward_fn(m, x):
+        out = m(pixel_values=x)
+        pooled = getattr(out, "pooler_output", None)
+        return pooled if pooled is not None else out.last_hidden_state[:, 0]
+
+    return Encoder(model, _vit_tf(), forward_fn, ckpt_path.name, device)
+
+
 def build_encoder(spec: str, ckpt: Path | None = None, device: str | None = None) -> Encoder:
     """Factory: 'dinov2' | 'imagenet' | 'resnet-ckpt' (needs `ckpt`)."""
     spec = spec.lower()

@@ -34,7 +34,7 @@ from src.models import build_model
 from src.reid.metric_losses import ProjectionHead, SupConLoss, TripletBatchHard
 from src.reid.reid_dataset import entries_from_folders
 from src.reid.sampler import PKSampler
-from src.transforms import build_strong_train_transform
+from src.transforms import build_strong_train_transform, build_heavy_muzzle_transform
 from src.utils import get_device, get_logger, save_json, set_seed
 
 # ArcFace head lives in the existing script; import to avoid duplication.
@@ -46,17 +46,32 @@ LOSSES = ("ce", "arcface", "supcon", "triplet")
 
 
 class Encoder(nn.Module):
-    """ResNet-50 backbone (fc→Identity, 2048-d feat) + a per-loss head."""
+    """Backbone (ResNet-50 2048-d, or DINOv2 ViT 768-d) + a per-loss head.
 
-    def __init__(self, loss: str, num_classes: int, pretrained: bool = True,
-                 arc_s: float = 30.0, arc_m: float = 0.5):
+    The backbone is the ONLY architectural variable; the loss/head logic is shared. For
+    eval, the checkpoint is reloaded by src/reid/encoders.{resnet50,dinov2}_checkpoint,
+    which use the 2048-d/768-d backbone feature (SupCon's projection head is training-only).
+    """
+
+    def __init__(self, loss: str, num_classes: int, backbone: str = "resnet50",
+                 pretrained: bool = True, arc_s: float = 30.0, arc_m: float = 0.5):
         super().__init__()
-        base = build_model("resnet50", num_classes=num_classes, freeze_backbone=False,
-                           pretrained=pretrained)
-        self.feat_dim = base.fc.in_features
-        base.fc = nn.Identity()
-        self.backbone = base
         self.loss = loss
+        self.backbone_name = backbone
+        if backbone == "resnet50":
+            base = build_model("resnet50", num_classes=num_classes, freeze_backbone=False,
+                               pretrained=pretrained)
+            self.feat_dim = base.fc.in_features
+            base.fc = nn.Identity()
+            self.backbone = base
+            self._is_vit = False
+        elif backbone == "dinov2":
+            from transformers import AutoModel
+            self.backbone = AutoModel.from_pretrained(config.DINOV2_MODEL)  # always pretrained
+            self.feat_dim = self.backbone.config.hidden_size                # 768 for -base
+            self._is_vit = True
+        else:
+            raise ValueError(f"unknown backbone {backbone}")
         if loss == "ce":
             self.head = nn.Linear(self.feat_dim, num_classes)
         elif loss == "arcface":
@@ -68,8 +83,15 @@ class Encoder(nn.Module):
         else:
             raise ValueError(f"unknown loss {loss}")
 
+    def _feat(self, x):
+        if self._is_vit:
+            out = self.backbone(pixel_values=x)
+            pooled = getattr(out, "pooler_output", None)
+            return pooled if pooled is not None else out.last_hidden_state[:, 0]
+        return self.backbone(x)
+
     def forward(self, x, labels=None):
-        feat = self.backbone(x)                       # [B, 2048]
+        feat = self._feat(x)                          # [B, feat_dim]
         if self.loss == "ce":
             return self.head(feat)
         if self.loss == "arcface":
@@ -79,7 +101,10 @@ class Encoder(nn.Module):
         return F.normalize(feat, dim=1)               # triplet: normalized backbone feat
 
     def export_state_dict(self, num_classes: int) -> dict:
-        """Standard ResNet-50 state_dict (backbone trained; fc slot = dummy/head weight)."""
+        """State_dict to reload for eval. ResNet-50 → standard resnet50 layout (head in the
+        fc slot, which the extractor discards). DINOv2 → the raw AutoModel state_dict."""
+        if self._is_vit:
+            return {k: v.detach().cpu().clone() for k, v in self.backbone.state_dict().items()}
         export = build_model("resnet50", num_classes=num_classes, freeze_backbone=False,
                              pretrained=False)
         sd = export.state_dict()
@@ -108,9 +133,14 @@ def main() -> int:
     ap.add_argument("--loss", required=True, choices=LOSSES)
     ap.add_argument("--out", default=None)
     ap.add_argument("--epochs", type=int, default=80)
+    ap.add_argument("--backbone", default="resnet50", choices=("resnet50", "dinov2"),
+                    help="feature backbone (dinov2 = fine-tune the ViT, unfrozen)")
+    ap.add_argument("--aug", default="strong", choices=("strong", "heavy"),
+                    help="strong = the 0.542 recipe; heavy = box-free muzzle-focus (harder)")
     ap.add_argument("--P", type=int, default=16, help="identities per batch")
     ap.add_argument("--K", type=int, default=4, help="images per identity per batch")
-    ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--lr", type=float, default=None,
+                    help="default 3e-4 for resnet50, 3e-5 for dinov2 (ViT needs a low LR)")
     ap.add_argument("--warmup", type=int, default=5)
     ap.add_argument("--image-size", type=int, default=config.IMAGE_SIZE_S2)
     ap.add_argument("--arc-s", type=float, default=30.0)
@@ -122,6 +152,9 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--smoke", action="store_true")
     args = ap.parse_args()
+
+    if args.lr is None:
+        args.lr = 3e-5 if args.backbone == "dinov2" else 3e-4
 
     set_seed(args.seed)
     config.ensure_output_dirs()
@@ -138,16 +171,18 @@ def main() -> int:
         # recount ids present in the subset (labels are global; sampler needs present ones)
     labels = [e["label"] for e in entries]
     use_norm = config.USE_IMAGENET_NORM_S2
-    log.info(f"loss={args.loss} | device={device} | ids={num_classes} | imgs={len(entries)} | "
-             f"P={P} K={K} | epochs={epochs} | image_size={args.image_size} | norm={use_norm}")
+    log.info(f"loss={args.loss} | backbone={args.backbone} | aug={args.aug} | lr={args.lr:.1e} | "
+             f"device={device} | ids={num_classes} | imgs={len(entries)} | P={P} K={K} | "
+             f"epochs={epochs} | image_size={args.image_size} | norm={use_norm}")
 
-    tf = build_strong_train_transform(args.image_size, use_norm)
+    tf = (build_heavy_muzzle_transform(args.image_size, use_norm) if args.aug == "heavy"
+          else build_strong_train_transform(args.image_size, use_norm))
     ds = MuzzleDataset(entries, transform=tf, data_dir=train_dir)
     sampler = PKSampler(labels, P=P, K=K, seed=args.seed)
     loader = DataLoader(ds, batch_size=P * K, sampler=sampler, num_workers=args.num_workers,
                         pin_memory=torch.cuda.is_available(), drop_last=True)
 
-    model = Encoder(args.loss, num_classes, pretrained=not args.smoke,
+    model = Encoder(args.loss, num_classes, backbone=args.backbone, pretrained=not args.smoke,
                     arc_s=args.arc_s, arc_m=args.arc_m).to(device)
     if args.loss in ("ce", "arcface"):
         criterion = nn.CrossEntropyLoss()
@@ -181,14 +216,19 @@ def main() -> int:
 
     out = Path(args.out) if args.out else config.CHECKPOINTS_DIR / f"cmpd300_{args.loss}.pt"
     out.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"model_state": model.export_state_dict(num_classes), "model_name": "resnet50",
-                "num_classes": num_classes,
-                "run_config": {"image_size": args.image_size, "use_imagenet_norm": use_norm},
+    run_config = {"image_size": args.image_size, "use_imagenet_norm": use_norm,
+                  "backbone": args.backbone, "aug": args.aug}
+    if args.backbone == "dinov2":
+        run_config["dinov2_model"] = config.DINOV2_MODEL
+    torch.save({"model_state": model.export_state_dict(num_classes), "model_name": args.backbone,
+                "num_classes": num_classes, "run_config": run_config,
                 "method": args.loss, "seed": args.seed}, out)
-    summary = {"loss": args.loss, "seed": args.seed, "num_classes": num_classes,
-               "epochs": epochs, "P": P, "K": K, "image_size": args.image_size,
-               "checkpoint": str(out), "elapsed_sec": round(time.time() - t0, 1)}
-    save_json(summary, config.RESULTS_DIR / f"13_train_{args.loss}.json")
+    summary = {"loss": args.loss, "backbone": args.backbone, "aug": args.aug, "lr": args.lr,
+               "seed": args.seed, "num_classes": num_classes, "epochs": epochs, "P": P, "K": K,
+               "image_size": args.image_size, "checkpoint": str(out),
+               "elapsed_sec": round(time.time() - t0, 1)}
+    tag = f"{args.backbone}_{args.loss}_{args.aug}"
+    save_json(summary, config.RESULTS_DIR / f"13_train_{tag}.json")
     log.info(f"saved {args.loss} encoder → {out} | {summary}")
     return 0
 

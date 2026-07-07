@@ -83,6 +83,39 @@ def build_strong_train_transform(image_size: int = config.IMAGE_SIZE_S2,
     return transforms.Compose(ops)
 
 
+def build_heavy_muzzle_transform(image_size: int = config.IMAGE_SIZE_S2,
+                                 use_imagenet_norm: bool = config.USE_IMAGENET_NORM_S2
+                                 ) -> transforms.Compose:
+    """MUCH stronger augmentation (Stage 3 improvement) — box-free muzzle focus.
+
+    Motivation: the epsilon probe showed identities get over-split because the WITHIN-cow
+    variation is of the same order as the BETWEEN-cow margin (~0.02 cosine). This transform
+    attacks intra-identity spread harder than `build_strong_train_transform`, to push
+    same-cow-different-photo closer and widen that margin:
+      - aggressive zoom-crop (scale down to 0.3) → removes surrounding context/background,
+      - wider rotation (±45) + random perspective → pose invariance,
+      - stronger ColorJitter + occasional GaussianBlur → lighting/optics invariance,
+      - TWO RandomErasing passes → no reliance on any fixed region (incl. background).
+    Kept SEPARATE from the strong transform so the original 0.542 run stays reproducible.
+    """
+    ops: list = [
+        transforms.RandomResizedCrop(image_size, scale=(0.3, 0.9), ratio=(0.75, 1.33)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomApply([transforms.RandomRotation(45)], p=0.8),
+        transforms.RandomApply([transforms.RandomPerspective(distortion_scale=0.3, p=1.0)], p=0.5),
+        transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.1),
+        transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.3),
+        transforms.ToTensor(),
+    ]
+    if use_imagenet_norm:
+        ops.append(transforms.Normalize(config.IMAGENET_MEAN, config.IMAGENET_STD))
+    ops += [
+        transforms.RandomErasing(p=0.5, scale=(0.02, 0.20)),
+        transforms.RandomErasing(p=0.3, scale=(0.02, 0.15)),
+    ]
+    return transforms.Compose(ops)
+
+
 def build_pil_aug_transform(image_size: int = config.IMAGE_SIZE) -> transforms.Compose:
     """Resize + augmentation, WITHOUT ToTensor → returns a PIL image.
 
