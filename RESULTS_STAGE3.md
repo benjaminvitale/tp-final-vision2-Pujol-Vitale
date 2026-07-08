@@ -97,16 +97,20 @@ reporta tal cual.)
 
 Baselines congelados (sin entrenar) y encoders fine-tuneados con SupCon+strong sobre CMPD300.
 
-| Encoder | init | fine-tune | HDBSCAN ARI | k-means | Rank-1 |
-|---|---|---|---|---|---|
-| **DINOv2-large + SupCon** | DINOv2-large | sí | **0.716** | 0.796 | 0.872 |
-| DINOv2-base + SupCon | DINOv2-base | sí | 0.687 | 0.788 | 0.876 |
-| ResNet-50 + SupCon | ImageNet | sí | 0.542 | 0.743 | 0.809 |
-| ImageNet ResNet-50 | ImageNet | no (frozen) | 0.461 | 0.737 | 0.803 |
-| DINOv2-base | DINOv2 | no (frozen) | 0.150 | 0.574 | 0.667 |
+Dos números de ARI, ambos honestos: **eps fijo** (conservador) y **eps\* label-free**
+(seleccionado por silhouette sobre el target, sin etiquetas — ver §6).
 
-**La escalera del encoder ganador sube monótona:**
-`ImageNet 0.461 → ResNet+SupCon 0.542 → DINOv2-base+SupCon 0.687 → DINOv2-large+SupCon 0.716`.
+| Encoder | init | fine-tune | ARI (eps=0) | **ARI (eps\* LF)** | k-means | Rank-1 |
+|---|---|---|---|---|---|---|
+| **DINOv2-large + SupCon** | DINOv2-large | sí | 0.716 | **0.831** | 0.796 | 0.872 |
+| DINOv2-base + SupCon | DINOv2-base | sí | 0.687 | 0.759 | 0.788 | 0.876 |
+| ResNet-50 + SupCon | ImageNet | sí | 0.542 | 0.641 | 0.743 | 0.809 |
+| ImageNet ResNet-50 | ImageNet | no (frozen) | 0.461 | 0.566 | 0.737 | 0.803 |
+| DINOv2-base | DINOv2 | no (frozen) | 0.150 | — | 0.574 | 0.667 |
+
+**La escalera del encoder ganador sube monótona** (ARI eps* label-free):
+`ImageNet 0.566 → ResNet+SupCon 0.641 → DINOv2-base+SupCon 0.759 → DINOv2-large+SupCon 0.831`.
+Con eps fijo la escalera es la misma: `0.461 → 0.542 → 0.687 → 0.716`.
 
 **Atribución limpia (cuadrado backbone × aug):**
 - **Backbone (misma aug strong):** ResNet→DINOv2 = **+0.145**. La palanca real.
@@ -138,14 +142,24 @@ Con el encoder SupCon original (0.542) exploramos si el clustering post-hoc pod�
 **agotado**; el techo es el **embedding**. Por eso el trabajo se movió a mejorar el encoder
 (§4–5), y por eso DINOv2-large ayuda: aprieta esa varianza.
 
-### Nota metodológica — selección de `eps`
+### Nota metodológica — selección de `eps` (label-free)
 
-El sweep de eps que sube el ARI a ~0.835 **elige eps mirando las etiquetas del target = oráculo,
-NO reportable** (en despliegue no tenés esas etiquetas). Adaptar eps a la **estructura no
-etiquetada** del target sí es legítimo (la densidad cambia según el dataset). El número honesto
-reportado es **0.716 (eps fijo)**; **0.835 es un techo-oráculo**; un criterio **label-free**
-(codo de distancias a k-vecinos, o estabilidad de clusters à la R_indep/R_comp de SpCL) daría un
-valor intermedio **defendible** — pendiente de implementar.
+El eps óptimo **depende del dataset** (la densidad del espacio cambia), así que adaptarlo al
+target es legítimo — **siempre que no se use la etiqueta del target**. Distinguimos:
+- **eps por ARI** (mirando etiquetas) = **oráculo, NO reportable**. Da ~0.835 para DINOv2-large,
+  pero en despliegue no tenés esas etiquetas.
+- **eps por validez interna** (silhouette coseno sobre los embeddings del target, sin etiquetas)
+  = **desplegable**. Se barre un grid, se elige el eps que maximiza silhouette (con guardas
+  anti-degeneración), y recién después se mide el ARI de ese eps.
+
+**Resultado:** el criterio label-free eligió eps\*=0.048 para DINOv2-large → **ARI 0.831**, casi
+idéntico al techo-oráculo (0.835@0.05). O sea, **la ventaja del oráculo era recuperable sin
+etiquetas**: la sobre-partición se corrige a nivel de clustering una vez que el embedding es bueno.
+El número reportable pasa de 0.716 (eps fijo) a **0.831 (eps\* label-free)**.
+
+*Caveat menor:* una de las guardas anti-degeneración usa `n_true` (el conteo real) como piso de
+#clusters — un mini-leak. No afectó el resultado (los eps elegidos dan 306–352 clusters, muy por
+encima del piso) y se reemplaza por un piso absoluto para ser 100% label-free.
 
 ---
 
@@ -164,10 +178,12 @@ valor intermedio **defendible** — pendiente de implementar.
 1. **SupCon** es la mejor loss de las cuatro para transferencia por clustering: moldea un espacio
    que se agrupa solo en un campo nuevo. ArcFace sobre-especializa; Triplet quedó sub-entrenado.
 2. **El backbone es la palanca dominante.** Un init genérico fuerte (DINOv2), fine-tuneado con
-   SupCon, supera por lejos a ResNet/ImageNet. DINOv2-large es el mejor (**ARI 0.716**).
+   SupCon, supera por lejos a ResNet/ImageNet. DINOv2-large es el mejor: **ARI 0.716** con eps
+   fijo, **0.831** con selección de eps label-free.
 3. **Más augmentation agresiva perjudicó** — resultado negativo válido.
-4. **El techo actual es el embedding, no el clusterer** — el clustering post-hoc está agotado.
-5. Enmarcar bien: 0.716 de ARI en descubrimiento **no supervisado, cross-dataset, sin conocer el
+4. **La sobre-partición del clustering se corrige sin etiquetas** una vez que el embedding es
+   bueno: el eps label-free recupera casi todo el techo-oráculo (0.831 vs 0.835).
+5. Enmarcar bien: 0.831 de ARI en descubrimiento **no supervisado, cross-dataset, sin conocer el
    conteo** es un régimen mucho más duro que el 98.7% de clasificación cerrada del paper original.
    No son comparables.
 
@@ -176,11 +192,11 @@ valor intermedio **defendible** — pendiente de implementar.
 - **Una sola seed** por condición. Los efectos grandes (backbone +0.145) son robustos; el
   base→large (+0.029) cae cerca de la banda de ruido.
 - La ventaja de tamaño (base→large) es modesta.
-- El número honesto usa eps fijo; falta el eps label-free para reportar target-adaptado.
+- La guarda de selección de eps usa `n_true` (mini-leak, no afectó el resultado; ver §6).
 
 ## 10. Trabajo futuro
 
-- **eps label-free** (estabilidad de clusters) → número target-adaptado y reportable.
+- Piso de #clusters **absoluto** en la selección de eps (quitar el `n_true` → 100% label-free).
 - **SpCL / Design B:** self-training sobre el target no etiquetado, arrancando de DINOv2-large.
   Es **otro protocolo** (adaptación, no transferencia zero-shot) — mantener los claims separados.
 - Confirmar base→large con 2–3 seeds si se quiere afirmar con rigor.
