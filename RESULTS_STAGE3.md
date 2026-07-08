@@ -21,9 +21,12 @@ Acá el problema es **más duro y más realista**: llega un campo nuevo, con vac
    imágenes → **1554** tras dedup por pHash).
 4. Clusterizar con HDBSCAN y medir contra las etiquetas reales (usadas **solo** para evaluar).
 
-**Métrica primaria: HDBSCAN ARI.** No Rank-1: un probe de robustez mostró que el Rank-1 se
-**infla** explotando el contexto/fondo, no la biometría del hocico. HDBSCAN ARI mide el
-escenario desplegable (no conocés el número de clusters).
+**Métrica primaria: HDBSCAN ARI.** Por dos razones: (1) **deployability** — en el campo real no
+conocés cuántas vacas hay, así que la tarea desplegable es clusterizar sin saber *k*, no retrieval;
+(2) **Rank-1 satura** en este target: SupCon 0.810 ≈ ImageNet 0.803, o sea que no discrimina entre
+encoders — hasta features genéricas la pasan. La ventaja del especialista aparece recién en **ARI**,
+que es la tarea más dura. (Los hocicos de Zenodo son crops apretados **sin fondo**, así que el
+Rank-1 alto no se explica por contexto/entorno.) Rank-1 se reporta como secundaria, con ese caveat.
 
 ---
 
