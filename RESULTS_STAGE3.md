@@ -42,6 +42,14 @@ Rank-1 alto no se explica por contexto/entorno.) Rank-1 se reporta como secundar
 - **Reproducibilidad:** splits/dedup deterministas; el mismo checkpoint da el mismo ARI al
   reevaluar. **Limitación declarada:** una sola seed de entrenamiento por condición.
 
+**Dos protocolos (ambos con datos reales, nada fabricado):**
+- **A — crudo + `mcs=4` (optimista):** sin dedup (4923 imgs). En crudo el mínimo real es 4
+  fotos/vaca, así que `mcs=4` no disuelve ninguna. Los near-duplicates de ráfaga facilitan el
+  clustering → **límite superior, con "trampa" de duplicados**.
+- **B — dedup + `mcs=2` (limpio, HEADLINE):** pHash dedup (1554 imgs). Anti-fuga, desplegable.
+- El delta A−B mide cuánto inflaban los duplicados (ver §5). No se augmenta el eval: fabricar
+  copias inflaría el ARI y reintroduce los near-dups que el dedup sacó.
+
 ---
 
 ## 3. Comparación de losses (backbone ResNet-50, augmentation fijo, 60 epochs)
@@ -94,34 +102,52 @@ augmentation mucho más agresiva, dirigida a forzar el foco en el hocico y no en
 **destruyeron señal del hocico**. `strong` es la receta. (Es un resultado negativo válido, se
 reporta tal cual.)
 
+**Matiz (con eps\* label-free, protocolo B):** el efecto se separa por backbone. En **ResNet la
+heavy sigue restando fuerte** (0.641 → 0.523), pero en **DINOv2-base se lava** (strong 0.785 ≈
+heavy 0.788). O sea: "la heavy perjudica" es sólido para ResNet; para DINOv2 el efecto es chico y
+depende del eps. En ambos casos, `strong` es igual o mejor → es la receta elegida.
+
 ---
 
 ## 5. Modelos / backbones y el resultado final
 
 Baselines congelados (sin entrenar) y encoders fine-tuneados con SupCon+strong sobre CMPD300.
+Cada ARI con eps fijo (0) y **eps\* label-free** (silhouette, sin etiquetas — ver §6).
 
-Dos números de ARI, ambos honestos: **eps fijo** (conservador) y **eps\* label-free**
-(seleccionado por silhouette sobre el target, sin etiquetas — ver §6).
+**Escalera de encoders — protocolo B (dedup, mcs=2, HEADLINE):**
 
-| Encoder | init | fine-tune | ARI (eps=0) | **ARI (eps\* LF)** | k-means | Rank-1 |
-|---|---|---|---|---|---|---|
-| **DINOv2-large + SupCon** | DINOv2-large | sí | 0.716 | **0.831** | 0.796 | 0.872 |
-| DINOv2-base + SupCon | DINOv2-base | sí | 0.687 | 0.759 | 0.788 | 0.876 |
-| ResNet-50 + SupCon | ImageNet | sí | 0.542 | 0.641 | 0.743 | 0.809 |
-| ImageNet ResNet-50 | ImageNet | no (frozen) | 0.461 | 0.566 | 0.737 | 0.803 |
-| DINOv2-base | DINOv2 | no (frozen) | 0.150 | — | 0.574 | 0.667 |
+| Encoder | ARI eps=0 | **ARI eps\*** | BCubed-F1 | homog / compl | Rank-1 |
+|---|---|---|---|---|---|
+| **DINOv2-large + SupCon** | 0.716 | **0.835** | 0.905 | 0.984 / 0.960 | 0.872 |
+| DINOv2-base + SupCon | 0.687 | 0.785 | 0.885 | 0.978 / 0.949 | 0.876 |
+| ResNet-50 + SupCon | 0.542 | 0.641 | 0.841 | 0.965 / 0.926 | 0.809 |
+| ImageNet ResNet-50 (frozen) | 0.461 | 0.550 | 0.829 | 0.955 / 0.920 | 0.802 |
+| DINOv2-base (frozen) | 0.153 | 0.155 | 0.728 | 0.878 / 0.876 | 0.669 |
 
-**La escalera del encoder ganador sube monótona** (ARI eps* label-free):
-`ImageNet 0.566 → ResNet+SupCon 0.641 → DINOv2-base+SupCon 0.759 → DINOv2-large+SupCon 0.831`.
-Con eps fijo la escalera es la misma: `0.461 → 0.542 → 0.687 → 0.716`.
+**Batería completa del ganador (DINOv2-large + SupCon, protocolo B, eps\*):** ARI 0.835 · AMI 0.916 ·
+NMI 0.972 · homog 0.984 / compl 0.960 · BCubed P/R/F1 0.962/0.855/0.905 · #clusters 304 (vs 268,
+ratio 1.13) · noise 0.01 · Rank-1 0.872 · k-means 0.790.
 
-**Atribución limpia (cuadrado backbone × aug):**
-- **Backbone (misma aug strong):** ResNet→DINOv2 = **+0.145**. La palanca real.
-- **Tamaño:** base→large = **+0.029** (modesto; single-seed cae cerca de la banda de ruido, pero
-  consistente — k-means también sube 0.788→0.796).
-- **Augmentation:** `heavy` restó en ambos.
+**Robustez — A (optimista) vs B (limpio) en el ganador:**
 
-**El hallazgo más interesante:** DINOv2 **congelado es el PEOR** (0.150) — sus features crudos no
+| protocolo | ARI eps=0 | ARI eps\* | Rank-1 |
+|---|---|---|---|
+| A (crudo, con duplicados) | 0.833 | 0.846 | 0.920 |
+| B (dedup, limpio) | 0.716 | 0.835 | 0.872 |
+| **Δ (A−B)** | **0.117** | **0.011** | 0.048 |
+
+A eps=0 los duplicados inflan fuerte (Δ=0.117). Pero **con eps\* label-free la brecha casi
+desaparece (Δ=0.011)**: el número limpio y desplegable (**0.835**) llega prácticamente al límite
+superior optimista (0.846). Quitar la muleta de los duplicados casi no cuesta → **0.835 es real, no
+un artefacto del protocolo.** (Rank-1 sí cae más, 0.920→0.872: retrieval se beneficia más de los
+duplicados; 0.872 es el número honesto.)
+
+**Atribución limpia (protocolo B, eps\*):**
+- **Backbone (misma aug strong):** ResNet→DINOv2 = **+0.144**. La palanca real.
+- **Tamaño:** base→large = **+0.050** (consistente; BCubed-F1 y Rank-1 acompañan).
+- **Augmentation:** `heavy` resta en ResNet, se lava en DINOv2 (ver §4).
+
+**El hallazgo más interesante:** DINOv2 **congelado es el PEOR** (0.155) — sus features crudos no
 son discriminativos para el hocico — pero como **init para fine-tunear es el MEJOR**. La conclusión
 no es "genérico vs especializado", es: **el mejor encoder = init genérico fuerte + especialización
 en hocico con una loss clusterizable (SupCon).**
@@ -155,14 +181,14 @@ target es legítimo — **siempre que no se use la etiqueta del target**. Distin
   = **desplegable**. Se barre un grid, se elige el eps que maximiza silhouette (con guardas
   anti-degeneración), y recién después se mide el ARI de ese eps.
 
-**Resultado:** el criterio label-free eligió eps\*=0.048 para DINOv2-large → **ARI 0.831**, casi
-idéntico al techo-oráculo (0.835@0.05). O sea, **la ventaja del oráculo era recuperable sin
-etiquetas**: la sobre-partición se corrige a nivel de clustering una vez que el embedding es bueno.
-El número reportable pasa de 0.716 (eps fijo) a **0.831 (eps\* label-free)**.
+**Resultado:** el criterio label-free eligió eps\*=0.050 para DINOv2-large → **ARI 0.835**, idéntico
+al techo-oráculo (0.835@0.05). O sea, **la ventaja del oráculo era recuperable sin etiquetas**: la
+sobre-partición se corrige a nivel de clustering una vez que el embedding es bueno (el ganador baja
+de ~386 a 304 clusters, ratio 1.13, con noise 0.01). El número reportable pasa de 0.716 (eps fijo)
+a **0.835 (eps\* label-free)**.
 
-*Caveat menor:* una de las guardas anti-degeneración usa `n_true` (el conteo real) como piso de
-#clusters — un mini-leak. No afectó el resultado (los eps elegidos dan 306–352 clusters, muy por
-encima del piso) y se reemplaza por un piso absoluto para ser 100% label-free.
+La selección usa un **piso absoluto** de #clusters (implementado en `scripts/reid_eval.py`, sin
+`n_true`), así que es 100% label-free — no mira el conteo real del target.
 
 ---
 
@@ -182,24 +208,27 @@ encima del piso) y se reemplaza por un piso absoluto para ser 100% label-free.
    que se agrupa solo en un campo nuevo. ArcFace sobre-especializa; Triplet quedó sub-entrenado.
 2. **El backbone es la palanca dominante.** Un init genérico fuerte (DINOv2), fine-tuneado con
    SupCon, supera por lejos a ResNet/ImageNet. DINOv2-large es el mejor: **ARI 0.716** con eps
-   fijo, **0.831** con selección de eps label-free.
-3. **Más augmentation agresiva perjudicó** — resultado negativo válido.
+   fijo, **0.835** con selección de eps label-free (BCubed-F1 0.905, Rank-1 0.872).
+3. **Más augmentation agresiva perjudicó** al ResNet; en DINOv2 el efecto se lava — resultado
+   negativo válido, `strong` es la receta.
 4. **La sobre-partición del clustering se corrige sin etiquetas** una vez que el embedding es
-   bueno: el eps label-free recupera casi todo el techo-oráculo (0.831 vs 0.835).
-5. Enmarcar bien: 0.831 de ARI en descubrimiento **no supervisado, cross-dataset, sin conocer el
+   bueno: el eps label-free recupera todo el techo-oráculo (0.835).
+5. **El resultado limpio es robusto:** en el protocolo optimista (crudo, con duplicados) el ganador
+   da 0.846 y en el limpio (dedup) 0.835 — con eps label-free la brecha es solo 0.011, o sea que el
+   número desplegable casi iguala al límite superior. No es un artefacto del dedup.
+6. Enmarcar bien: 0.835 de ARI en descubrimiento **no supervisado, cross-dataset, sin conocer el
    conteo** es un régimen mucho más duro que el 98.7% de clasificación cerrada del paper original.
    No son comparables.
 
 ## 9. Limitaciones
 
-- **Una sola seed** por condición. Los efectos grandes (backbone +0.145) son robustos; el
-  base→large (+0.029) cae cerca de la banda de ruido.
-- La ventaja de tamaño (base→large) es modesta.
-- La guarda de selección de eps usa `n_true` (mini-leak, no afectó el resultado; ver §6).
+- **Una sola seed** por condición. Los efectos grandes (backbone +0.144) son robustos; el
+  base→large (+0.050) es consistente pero conviene confirmarlo con seeds.
+- **8 vacas (3%) tienen 1 sola foto** post-dedup → son inherentemente no-clusterizables (un cluster
+  necesita ≥2 puntos). Es un límite del dataset, no del método.
 
 ## 10. Trabajo futuro
 
-- Piso de #clusters **absoluto** en la selección de eps (quitar el `n_true` → 100% label-free).
 - **SpCL / Design B:** self-training sobre el target no etiquetado, arrancando de DINOv2-large.
   Es **otro protocolo** (adaptación, no transferencia zero-shot) — mantener los claims separados.
 - Confirmar base→large con 2–3 seeds si se quiere afirmar con rigor.
